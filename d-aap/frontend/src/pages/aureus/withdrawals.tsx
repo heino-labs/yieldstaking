@@ -1,4 +1,5 @@
 import { useState, useEffect, useMemo } from 'react';
+import { useQuery } from '@tanstack/react-query';
 import { useAccount, useChainId } from 'wagmi';
 import { ArrowDownToLine, Clock, Loader2, Unlock, Gift } from 'lucide-react';
 import { toast } from 'sonner';
@@ -8,9 +9,14 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { WalletDisplay } from '@/components/wallet';
 import { StakedPackagesTable, type StakedPackageItem } from '@/components/tables';
-import { useYieldStaking, useUserStakes } from '@/hooks/use-yield-staking';
+import { useYieldStaking } from '@/hooks/use-yield-staking';
 import { EXPLORER_ENDPOINTS } from '@/lib/constants/rpc';
 import { DEFAULT_CHAIN_ID } from '@/lib/config/chains';
+import { fetchMyPositions } from '@/lib/api/staking';
+import { hasAccountAuth } from '@/lib/auth/auth';
+
+const DEFAULT_STAKE_DECIMALS = 18;
+const DEFAULT_REWARD_DECIMALS = 18;
 
 function formatDate(timestamp: bigint): string {
     if (timestamp === BigInt(0)) return '-';
@@ -48,9 +54,9 @@ export default function WithdrawalsPage() {
     const [selectedStake, setSelectedStake] = useState<string | null>(null);
     const [processingId, setProcessingId] = useState<string | null>(null);
     const [actionType, setActionType] = useState<'claim' | 'withdraw' | null>(null);
+    const isAuthenticated = hasAccountAuth();
 
     const {
-        packages,
         tokenDecimals,
         tokenSymbol,
         rewardTokenDecimals,
@@ -65,41 +71,62 @@ export default function WithdrawalsPage() {
         refetchAll,
     } = useYieldStaking();
 
-    const stakesData = packages.map(pkg => {
-        const { stakes, refetch } = useUserStakes(pkg.id);
-        return { packageId: pkg.id, stakes, refetch };
+    const { data: positionsResp } = useQuery({
+        queryKey: ['staking', 'my-positions', { page: 1, limit: 200 }],
+        queryFn: () => fetchMyPositions({ page: 1, limit: 200 }),
+        enabled: isAuthenticated,
+        staleTime: 30_000,
     });
 
-    const allStakes = useMemo(() => 
-        stakesData.flatMap(data => 
-            data.stakes.map(stake => ({
-                ...stake,
-                package: packages.find(p => p.id === data.packageId),
-            }))
-        ),
-        [stakesData, packages]
-    );
+    const positions = positionsResp?.positions ?? [];
 
-    const tableData: StakedPackageItem[] = useMemo(() =>
-        allStakes.map(stake => ({
-            id: `${stake.packageId}-${stake.stakeId}`,
-            packageId: stake.packageId,
-            stakeId: stake.stakeId,
-            lockPeriod: formatLockPeriod(stake.lockPeriod),
-            apy: stake.package?.apy || 0,
-            stakedAmount: parseFloat(formatUnits(stake.balance, tokenDecimals)).toLocaleString(undefined, { maximumFractionDigits: 2 }),
-            claimable: parseFloat(formatUnits(stake.claimable, rewardTokenDecimals)).toFixed(4),
-            unlockDate: formatDate(stake.unlockTimestamp),
-            timeRemaining: getTimeRemaining(stake.unlockTimestamp),
-            isUnlocked: isUnlocked(stake.unlockTimestamp),
-        })),
-        [allStakes, tokenDecimals, rewardTokenDecimals]
+    const tableData: StakedPackageItem[] = useMemo(
+        () =>
+            positions
+                .filter((p) => !p.isWithdrawn)
+                .map((pos) => {
+                const stakeTokenDecimals =
+                    pos.contract?.stakeTokenDecimals ??
+                    stakeTokenDecimalsFromBackend ??
+                    tokenDecimals ??
+                    DEFAULT_STAKE_DECIMALS;
+                const rewardDecimals =
+                    pos.contract?.rewardTokenDecimals ??
+                    rewardTokenDecimalsFromBackend ??
+                    rewardTokenDecimals ??
+                    DEFAULT_REWARD_DECIMALS;
+
+                const principal = BigInt(pos.principal || '0');
+                const claimable = BigInt(pos.claimableReward || '0');
+
+                const unlockTs = new Date(pos.unlockTimestamp).getTime();
+                const unlockTimestamp = BigInt(Math.floor(unlockTs / 1000));
+
+                return {
+                    id: `${pos.onChainPackageId}-${pos.onChainStakeId}`,
+                    packageId: pos.onChainPackageId,
+                    stakeId: pos.onChainStakeId,
+                    lockPeriod: formatLockPeriod(BigInt(pos.lockPeriod)),
+                    apy: Number(pos.package?.apy ?? 0) / 100,
+                    stakedAmount: parseFloat(formatUnits(principal, stakeTokenDecimals)).toLocaleString(undefined, { maximumFractionDigits: 2 }),
+                    claimable: parseFloat(formatUnits(claimable, rewardDecimals)).toFixed(4),
+                    unlockDate: formatDate(unlockTimestamp),
+                    timeRemaining: getTimeRemaining(unlockTimestamp),
+                    isUnlocked: isUnlocked(unlockTimestamp),
+                };
+                }),
+        [positions, tokenDecimals, rewardTokenDecimals],
     );
 
     const selected = useMemo(() => {
-        if (!selectedStake) return allStakes[0] || null;
-        return allStakes.find(s => `${s.packageId}-${s.stakeId}` === selectedStake) || null;
-    }, [selectedStake, allStakes]);
+        if (!selectedStake) return positions[0] || null;
+        return (
+            positions.find(
+                (p) =>
+                    `${p.onChainPackageId}-${p.onChainStakeId}` === selectedStake,
+            ) || null
+        );
+    }, [selectedStake, positions]);
 
     useEffect(() => {
         if (isConfirmed) {
@@ -108,35 +135,41 @@ export default function WithdrawalsPage() {
             setActionType(null);
             reset();
             refetchAll();
-            stakesData.forEach(d => d.refetch());
         }
     }, [isConfirmed, actionType, reset, refetchAll]);
 
     const handleClaim = () => {
         if (!selected) return;
-        setProcessingId(`${selected.packageId}-${selected.stakeId}-claim`);
+        setProcessingId(`${selected.onChainPackageId}-${selected.onChainStakeId}-claim`);
         setActionType('claim');
-        claim(selected.packageId, selected.stakeId);
+        claim(selected.onChainPackageId, selected.onChainStakeId);
     };
 
     const handleWithdraw = () => {
         if (!selected) return;
-        setProcessingId(`${selected.packageId}-${selected.stakeId}-withdraw`);
+        setProcessingId(`${selected.onChainPackageId}-${selected.onChainStakeId}-withdraw`);
         setActionType('withdraw');
-        withdraw(selected.packageId, selected.stakeId);
+        withdraw(selected.onChainPackageId, selected.onChainStakeId);
     };
 
     const isProcessing = isWritePending || isConfirming;
-    const unlocked = selected ? isUnlocked(selected.unlockTimestamp) : false;
+    const unlocked = selected
+        ? new Date(selected.unlockTimestamp).getTime() <= Date.now()
+        : false;
     const explorerUrl = EXPLORER_ENDPOINTS[chainId] || EXPLORER_ENDPOINTS[DEFAULT_CHAIN_ID];
+    const stakeSymbolFromBackend = selected?.contract?.stakeTokenSymbol;
+    const rewardSymbolFromBackend = selected?.contract?.rewardTokenSymbol;
+    const stakeTokenDecimalsFromBackend = selected?.contract?.stakeTokenDecimals;
+    const rewardTokenDecimalsFromBackend = selected?.contract?.rewardTokenDecimals;
 
-    if (!isConnected) {
+    if (!isAuthenticated) {
         return (
             <div className="flex flex-1 items-center justify-center p-4">
                 <div className="w-full max-w-lg rounded-2xl bg-card border p-8 text-center space-y-6">
-                    <h1 className="text-2xl font-bold">Connect Wallet</h1>
-                    <p className="text-muted-foreground">Please connect your wallet to manage your stakes</p>
-                    <WalletDisplay />
+                    <h1 className="text-2xl font-bold">Sign in required</h1>
+                    <p className="text-muted-foreground">
+                        Please sign in to view and manage your stake positions.
+                    </p>
                 </div>
             </div>
         );
@@ -148,17 +181,32 @@ export default function WithdrawalsPage() {
                 <h1 className="text-2xl font-bold">Withdraw & Claim</h1>
                 <p className="text-muted-foreground">Manage your staked positions and claim rewards</p>
             </div>
+            {!isConnected && (
+                <div className="mb-6 rounded-2xl bg-card border p-6">
+                    <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+                        <div>
+                            <div className="text-lg font-semibold">Wallet not connected</div>
+                            <div className="text-sm text-muted-foreground">
+                                You can view your positions from backend history, but claiming/withdrawing requires connecting your wallet to sign transactions.
+                            </div>
+                        </div>
+                        <div className="max-w-xs">
+                            <WalletDisplay />
+                        </div>
+                    </div>
+                </div>
+            )}
 
             <div className="grid gap-6 lg:grid-cols-10">
                 <div className="lg:col-span-6">
                     <StakedPackagesTable 
                         data={tableData}
-                        selectedId={selectedStake || (allStakes[0] ? `${allStakes[0].packageId}-${allStakes[0].stakeId}` : null)}
+                        selectedId={selectedStake || (positions[0] ? `${positions[0].onChainPackageId}-${positions[0].onChainStakeId}` : null)}
                         onSelect={setSelectedStake}
                         explorerUrl={explorerUrl}
                         contractAddress={stakingAddress}
-                        stakeSymbol={tokenSymbol}
-                        rewardSymbol={rewardSymbol}
+                        stakeSymbol={stakeSymbolFromBackend || tokenSymbol}
+                        rewardSymbol={rewardSymbolFromBackend || rewardSymbol}
                     />
                 </div>
                 <div className="lg:col-span-4">
@@ -174,10 +222,10 @@ export default function WithdrawalsPage() {
                                                 </div>
                                                 <div>
                                                     <div className="font-semibold">
-                                                        {formatLockPeriod(selected.lockPeriod)} Package
+                                                        {formatLockPeriod(BigInt(selected.lockPeriod))} Package
                                                     </div>
                                                     <div className="text-sm text-muted-foreground">
-                                                        APY: <span className="text-primary font-semibold">{selected.package?.apy}%</span>
+                                                        APY: <span className="text-primary font-semibold">{Number(selected.package?.apy ?? 0) / 100}%</span>
                                                     </div>
                                                 </div>
                                             </div>
@@ -187,11 +235,21 @@ export default function WithdrawalsPage() {
                                                         <Unlock className="h-4 w-4" />
                                                         Unlocked
                                                     </span>
-                                                ) : (
+                                                ) : selected ? (
                                                     <span className="text-sm text-muted-foreground">
-                                                        {getTimeRemaining(selected.unlockTimestamp)} remaining
+                                                        {getTimeRemaining(
+                                                            BigInt(
+                                                                Math.floor(
+                                                                    new Date(
+                                                                        selected.unlockTimestamp,
+                                                                    ).getTime() /
+                                                                        1000,
+                                                                ),
+                                                            ),
+                                                        )}{' '}
+                                                        remaining
                                                     </span>
-                                                )}
+                                                ) : null}
                                             </div>
                                         </div>
 
@@ -199,30 +257,30 @@ export default function WithdrawalsPage() {
                                             <div className="flex justify-between text-sm">
                                                 <span className="text-muted-foreground">Staked Amount</span>
                                                 <span className="font-semibold">
-                                                    {parseFloat(formatUnits(selected.balance, tokenDecimals)).toLocaleString(undefined, { maximumFractionDigits: 2 })} {tokenSymbol}
+                                                    {parseFloat(formatUnits(BigInt(selected.principal || '0'), stakeTokenDecimalsFromBackend ?? tokenDecimals)).toLocaleString(undefined, { maximumFractionDigits: 2 })} {stakeSymbolFromBackend || tokenSymbol}
                                                 </span>
                                             </div>
                                             <div className="flex justify-between text-sm">
                                                 <span className="text-muted-foreground">Total Rewards</span>
                                                 <span className="font-semibold">
-                                                    {parseFloat(formatUnits(selected.rewardTotal, rewardTokenDecimals)).toFixed(4)} {rewardSymbol}
+                                                    {parseFloat(formatUnits(BigInt(selected.rewardTotal || '0'), rewardTokenDecimalsFromBackend ?? rewardTokenDecimals)).toFixed(4)} {rewardSymbolFromBackend || rewardSymbol}
                                                 </span>
                                             </div>
                                             <div className="flex justify-between text-sm">
                                                 <span className="text-muted-foreground">Claimed</span>
                                                 <span className="font-semibold">
-                                                    {parseFloat(formatUnits(selected.rewardClaimed, rewardTokenDecimals)).toFixed(4)} {rewardSymbol}
+                                                    {parseFloat(formatUnits(BigInt(selected.rewardClaimed || '0'), rewardTokenDecimalsFromBackend ?? rewardTokenDecimals)).toFixed(4)} {rewardSymbolFromBackend || rewardSymbol}
                                                 </span>
                                             </div>
                                             <div className="flex justify-between text-sm">
                                                 <span className="text-muted-foreground">Claimable Now</span>
                                                 <span className="font-semibold text-green-500">
-                                                    +{parseFloat(formatUnits(selected.claimable, rewardTokenDecimals)).toFixed(4)} {rewardSymbol}
+                                                    +{parseFloat(formatUnits(BigInt(selected.claimableReward || '0'), rewardTokenDecimalsFromBackend ?? rewardTokenDecimals)).toFixed(4)} {rewardSymbolFromBackend || rewardSymbol}
                                                 </span>
                                             </div>
                                             <div className="flex justify-between text-sm">
                                                 <span className="text-muted-foreground">Unlock Date</span>
-                                                <span className="font-semibold">{formatDate(selected.unlockTimestamp)}</span>
+                                                <span className="font-semibold">{new Date(selected.unlockTimestamp).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}</span>
                                             </div>
                                         </div>
                                     </div>
@@ -232,7 +290,7 @@ export default function WithdrawalsPage() {
                                             variant="outline"
                                             className="h-12"
                                             onClick={handleClaim}
-                                            disabled={selected.claimable === BigInt(0) || isProcessing}
+                                            disabled={!isConnected || BigInt(selected.claimableReward || '0') === BigInt(0) || isProcessing}
                                         >
                                             {processingId?.endsWith('-claim') && isProcessing ? (
                                                 <Loader2 className="mr-2 h-5 w-5 animate-spin" />
@@ -244,7 +302,7 @@ export default function WithdrawalsPage() {
                                         <Button
                                             className="h-12 bg-gradient-to-r from-amber-500 to-yellow-600 hover:from-amber-600 hover:to-yellow-700 text-white"
                                             onClick={handleWithdraw}
-                                            disabled={!unlocked || isProcessing}
+                                            disabled={!isConnected || !unlocked || isProcessing}
                                         >
                                             {processingId?.endsWith('-withdraw') && isProcessing ? (
                                                 <Loader2 className="mr-2 h-5 w-5 animate-spin" />

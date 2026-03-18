@@ -33,11 +33,20 @@ export class AuthService {
         private jwtService: JwtService,
         private configService: ConfigService,
     ) {
-        const jwtConfiguration = this.configService.get("jwt");
+        const jwtConfiguration = this.configService.get<{
+            secretKey: string;
+            expiresIn: string;
+            refreshExpiresIn: string;
+        }>("jwt");
+
+        if (!jwtConfiguration?.secretKey) {
+            throw new Error("JWT configuration is missing secretKey");
+        }
+
         this.jwtConfig = {
-            secretKey: jwtConfiguration?.secretKey || "lottery-secret-key",
-            expiresIn: jwtConfiguration?.expiresIn || "1h",
-            refreshExpiresIn: jwtConfiguration?.refreshExpiresIn || "7d",
+            secretKey: jwtConfiguration.secretKey,
+            expiresIn: jwtConfiguration.expiresIn,
+            refreshExpiresIn: jwtConfiguration.refreshExpiresIn,
         };
     }
 

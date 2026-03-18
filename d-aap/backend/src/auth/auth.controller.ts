@@ -1,16 +1,23 @@
 import {
-    Controller,
-    Request,
-    Post,
-    UseGuards,
     Body,
+    Controller,
     Get,
+    Post,
     Req,
+    Request,
     Res,
+    UseGuards,
 } from "@nestjs/common";
 import { Response } from "express";
 
 import { AuthService } from "./auth.service";
+import {
+    EmailRegisterDto,
+    MetaMaskNonceDto,
+    MetaMaskSignInDto,
+    RefreshTokenDto,
+    RequestPasswordResetDto,
+} from "./dto/auth.dto";
 import { ResetPasswordDto } from "./dto/reset-password.dto";
 import { GoogleAuthGuard } from "./guard/google-auth.guard";
 import { JwtAuthGuard } from "./guard/jwt-auth.guard";
@@ -18,30 +25,6 @@ import { LocalAuthGuard } from "./guard/local-auth.guard";
 import { AuthenticatedRequest } from "./interface/authenticated-request.interface";
 import { MetaMaskAuthService } from "./metamask-auth.service";
 import { SUCCESS_MESSAGES } from "../constants/messages.constant";
-
-interface RequestPasswordResetDto {
-    email: string;
-}
-
-interface RefreshTokenDto {
-    refreshToken: string;
-}
-
-interface MetaMaskNonceDto {
-    walletAddress: string;
-}
-
-interface MetaMaskSignInDto {
-    walletAddress: string;
-    signature: string;
-    message: string;
-}
-
-interface EmailRegisterDto {
-    name: string;
-    email: string;
-    password: string;
-}
 
 @Controller("auth")
 export class AuthController {

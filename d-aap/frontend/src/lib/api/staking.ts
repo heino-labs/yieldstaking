@@ -39,11 +39,25 @@ export interface StakePosition {
     principal: string;
     rewardTotal: string;
     rewardClaimed: string;
+    claimableReward?: string;
+    isUnlocked?: boolean;
+    lockPeriodDays?: number;
     lockPeriod: number;
     startTimestamp: string;
     unlockTimestamp: string;
+    lastClaimTimestamp?: string | null;
     isWithdrawn: boolean;
+    isEmergencyWithdrawn?: boolean;
+    stakeTxHash?: string | null;
+    withdrawTxHash?: string | null;
     package: StakingPackage;
+    contract?: {
+        address: string;
+        stakeTokenSymbol: string;
+        rewardTokenSymbol: string;
+        stakeTokenDecimals: number;
+        rewardTokenDecimals: number;
+    };
 }
 
 export interface StakePositionsResponse {

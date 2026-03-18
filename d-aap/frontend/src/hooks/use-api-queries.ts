@@ -14,6 +14,7 @@ import {
 
 import { fetchTransactions } from '@/lib/api/transactions';
 import { fetchUserProfileWithStats, updateUserProfile, fetchUserStatistics } from '@/lib/api/users';
+import { useAuthentication } from '@/hooks/use-authentication';
 
 import type {
     UpdateProfileData,
@@ -21,10 +22,13 @@ import type {
 } from '@/interfaces';
 
 export function useAuthProfile() {
+    const { isAuthenticated } = useAuthentication();
+
     return useQuery({
         queryKey: ['auth', 'profile'],
         queryFn: getAuthProfile,
         staleTime: 5 * 60 * 1000,
+        enabled: isAuthenticated,
     });
 }
 

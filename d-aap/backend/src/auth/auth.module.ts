@@ -24,10 +24,14 @@ import { PrismaModule } from "../prisma/prisma.module";
         JwtModule.registerAsync({
             imports: [ConfigModule],
             useFactory: (configService: ConfigService) => {
-                const jwtConfig = configService.get("jwt");
+                const jwtConfig = configService.get<{
+                    secretKey: string;
+                    expiresIn: string;
+                    refreshExpiresIn: string;
+                }>("jwt");
                 return {
-                    secret: jwtConfig?.secretKey || "lottery-secret-key",
-                    signOptions: { expiresIn: jwtConfig?.expiresIn || "1h" },
+                    secret: jwtConfig?.secretKey,
+                    signOptions: { expiresIn: jwtConfig?.expiresIn },
                 } as JwtModuleOptions;
             },
             inject: [ConfigService],
