@@ -4,7 +4,7 @@ export default registerAs("cors", () => {
     const frontendUrl = process.env.FRONTEND_URL || "http://localhost:8080";
 
     return {
-        origin: frontendUrl,
+        origin: 'https://yieldstaking.vercel.app',
         credentials: true,
         methods: ["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"],
         allowedHeaders: [
