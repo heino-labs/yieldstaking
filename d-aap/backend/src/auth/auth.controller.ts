@@ -58,12 +58,12 @@ export class AuthController {
         };
     }
 
-    @UseGuards(LocalAuthGuard)
     @Post("login")
     async login(@Request() req: AuthenticatedRequest) {
         return this.authService.login(req);
     }
 
+    @UseGuards(LocalAuthGuard)
     @Post("refresh")
     async refresh(@Body() refreshDto: RefreshTokenDto) {
         return this.authService.refreshToken(refreshDto.refreshToken);
