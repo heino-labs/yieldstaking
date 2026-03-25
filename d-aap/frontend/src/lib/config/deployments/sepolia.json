@@ -1,6 +1,6 @@
 {
   "network": "sepolia",
-  "yieldStaking": "0x2d58F549ce83D5125d198e1ef36e2E7c1fF6bc6F",
-  "aureus": "0x87b82b039E9F6a919cE5aE17DBE66Fad091F15b9",
-  "mockUsdt": "0x916a38BFf7a7fdA1A25EaEF64345172C04c2bdb2"
+  "yieldStaking": "0x996DCEAf240ed245fb7Cf775cC5E2863Bb710e07",
+  "aureus": "0x480799dA06AA36b25398B87E7dAd110bec837Edf",
+  "mockUsdt": "0xf3600F395aA93550242Ef2ACcD1aeE6502486D0D"
 }
