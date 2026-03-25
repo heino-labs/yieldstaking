@@ -144,7 +144,7 @@ contract YieldStaking is
         require(stakeDecimals <= 18, "Stake decimals > 18");
         require(rewardDecimals <= 18, "Reward decimals > 18");
 
-        minStakeAmount = 500 * 10 ** stakeDecimals;
+        minStakeAmount = 100 * 10 ** stakeDecimals;
 
         // default packages with validated bounds
         packages[0] = PackageConfig(90 days, 2000, true);

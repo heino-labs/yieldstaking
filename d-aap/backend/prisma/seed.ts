@@ -1,13 +1,16 @@
-import { PrismaClient, TransactionType, TransactionStatus } from '@prisma/client';
+import { PrismaClient } from '@prisma/client';
 import { ethers } from 'ethers';
+import * as bcrypt from 'bcrypt';
 
 const prisma = new PrismaClient();
-const isProd = process.env.NODE_ENV === 'production';
 
-const randomAddress = () => `0x${[...Array(40)].map(() => Math.floor(Math.random() * 16).toString(16)).join('')}`;
-const randomTxHash = () => `0x${[...Array(64)].map(() => Math.floor(Math.random() * 16).toString(16)).join('')}`;
-const toTokenAmount = (amount: number, decimals: number) => 
-    BigInt(Math.floor(amount * Math.pow(10, decimals))).toString();
+const getEnvAddress = (key: string): string => {
+    const raw = process.env[key];
+    if (!raw) throw new Error(`Missing environment variable: ${key}`);
+    const addr = raw.trim();
+    if (!ethers.isAddress(addr)) throw new Error(`Invalid address for ${key}: ${addr}`);
+    return addr.toLowerCase();
+};
 
 async function main() {
     const sepolia = await prisma.chain.upsert({
@@ -22,18 +25,6 @@ async function main() {
             isActive: true,
         },
     });
-
-    const getEnvAddress = (key: string): string => {
-        const raw = process.env[key];
-        if (!raw) {
-            throw new Error(`Missing environment variable: ${key}`);
-        }
-        const addr = raw.trim();
-        if (!ethers.isAddress(addr)) {
-            throw new Error(`Invalid address for ${key}: ${addr}`);
-        }
-        return addr.toLowerCase();
-    };
 
     const contractAddress = getEnvAddress('YIELD_STAKING_ADDRESS');
     const usdtAddress = getEnvAddress('USDT_ADDRESS');
@@ -51,328 +42,112 @@ async function main() {
             rewardTokenSymbol: 'USDT',
             stakeTokenDecimals: 18,
             rewardTokenDecimals: 6,
-            minStakeAmount: toTokenAmount(100, 18),
+            minStakeAmount: (100n * 10n ** 18n).toString(),
             maxStakePerUser: '0',
-            totalLocked: toTokenAmount(500000, 18),
-            totalRewardDebt: toTokenAmount(25000, 6),
+            totalLocked: '0',
+            totalRewardDebt: '0',
             isPaused: false,
         },
     });
 
+    // Mirror the 4 packages defined in YieldStaking constructor
     const packagesData = [
-        { packageId: 0, lockPeriod: 90 * 86400, apy: 2000 },
+        { packageId: 0, lockPeriod: 90 * 86400,  apy: 2000 },
         { packageId: 1, lockPeriod: 180 * 86400, apy: 2500 },
         { packageId: 2, lockPeriod: 270 * 86400, apy: 3500 },
         { packageId: 3, lockPeriod: 360 * 86400, apy: 5000 },
     ];
 
-    const packages: Record<number, { id: number; packageId: number; lockPeriod: number; apy: number }> = {};
-
     for (const pkg of packagesData) {
-        const created = await prisma.stakingPackage.upsert({
+        await prisma.stakingPackage.upsert({
             where: {
                 contractId_packageId: {
                     contractId: stakingContract.id,
                     packageId: pkg.packageId,
                 },
             },
-            update: { lockPeriod: pkg.lockPeriod, apy: pkg.apy },
+            update: { lockPeriod: pkg.lockPeriod, apy: pkg.apy, isEnabled: true },
             create: {
                 contractId: stakingContract.id,
                 packageId: pkg.packageId,
                 lockPeriod: pkg.lockPeriod,
                 apy: pkg.apy,
                 isEnabled: true,
-                totalStaked: toTokenAmount(50000 + pkg.packageId * 30000, 18),
+                totalStaked: '0',
                 maxTotalStaked: '0',
-                stakersCount: 10 + pkg.packageId * 5,
+                stakersCount: 0,
             },
         });
-        packages[pkg.packageId] = created;
     }
 
-    const bcrypt = await import('bcrypt');
     const hashedPassword = await bcrypt.hash('123', 12);
 
-    const adminUser = await prisma.user.upsert({
-        where: { email: 'admin@yieldstaking.com' },
-        update: {},
-        create: {
+    const usersData = [
+        {
             email: 'admin@yieldstaking.com',
-            password: hashedPassword,
             name: 'Platform Admin',
-            authMethod: 'EMAIL_PASSWORD',
-            role: 'ADMIN',
-            status: 'ACTIVE',
-            emailVerified: true,
-            emailVerifiedAt: new Date(),
+            role: 'ADMIN' as const,
+            walletAddress: '0x237Dee4c976E3c4861fE6a99fBa1D60f0E72F464',
         },
-    });
+        {
+            email: 'user1@yieldstaking.com',
+            name: 'User One',
+            role: 'USER' as const,
+            walletAddress: '0x8fC341361fD05D8D93D69745FD6FeCeE6927Bc27',
+        },
+        {
+            email: 'user2@yieldstaking.com',
+            name: 'User Two',
+            role: 'USER' as const,
+            walletAddress: '0x16C750389a585545cd7D52Feba7640cFD7c77Ef7',
+        },
+    ];
 
-    if (isProd) {
-        const prodUser = await prisma.user.upsert({
-            where: { email: 'user@yieldstaking.com' },
+    for (const userData of usersData) {
+        const user = await prisma.user.upsert({
+            where: { email: userData.email },
             update: {},
             create: {
-                email: 'user@yieldstaking.com',
+                email: userData.email,
                 password: hashedPassword,
-                name: 'Demo User',
+                name: userData.name,
                 authMethod: 'EMAIL_PASSWORD',
-                role: 'USER',
+                role: userData.role,
                 status: 'ACTIVE',
                 emailVerified: true,
                 emailVerifiedAt: new Date(),
             },
         });
 
-        console.log('\n🎉 Production seed completed!');
-        console.log('━'.repeat(40));
-        console.log('   Admin: admin@yieldstaking.com / 123');
-        console.log('   User: user@yieldstaking.com / 123');
-        console.log('━'.repeat(40));
-        return;
-    }
-
-    // Development: create test users with wallets, stakes, transactions
-    const testUsers = [
-        { name: 'Alice Staker', email: 'alice@test.com', wallet: '0xalice0000000000000000000000000000000001' },
-        { name: 'Bob Investor', email: 'bob@test.com', wallet: '0xbob00000000000000000000000000000000002' },
-        { name: 'Charlie Whale', email: 'charlie@test.com', wallet: '0xcharlie000000000000000000000000000003' },
-        { name: 'Diana Hodler', email: 'diana@test.com', wallet: '0xdiana0000000000000000000000000000004' },
-        { name: 'Wallet User', email: null, wallet: '0xwallet0000000000000000000000000000005' },
-    ];
-
-    const users: { user: typeof adminUser; wallet: { id: number; walletAddress: string } }[] = [];
-
-    for (const testUser of testUsers) {
-        const user = await prisma.user.upsert({
-            where: { email: testUser.email || `wallet_${testUser.wallet}@temp.local` },
-            update: {},
-            create: {
-                email: testUser.email,
-                password: testUser.email ? hashedPassword : null,
-                name: testUser.name,
-                authMethod: testUser.email ? 'EMAIL_PASSWORD' : 'WALLET',
-                role: 'USER',
-                status: 'ACTIVE',
-                emailVerified: !!testUser.email,
-                emailVerifiedAt: testUser.email ? new Date() : null,
-            },
-        });
-
-        const wallet = await prisma.userWallet.upsert({
-            where: { walletAddress: testUser.wallet },
+        await prisma.userWallet.upsert({
+            where: { walletAddress: userData.walletAddress.toLowerCase() },
             update: {},
             create: {
                 userId: user.id,
                 chainId: sepolia.id,
-                walletAddress: testUser.wallet,
+                walletAddress: userData.walletAddress.toLowerCase(),
                 isVerified: true,
                 isPrimary: true,
                 verifiedAt: new Date(),
                 walletType: 'MetaMask',
             },
         });
-
-        users.push({ user, wallet });
     }
 
-
-    const now = new Date();
-    let stakeIdCounter = 0;
-
-    for (const { user, wallet } of users) {
-        const numPositions = Math.floor(Math.random() * 3) + 1;
-
-        for (let i = 0; i < numPositions; i++) {
-            const pkgId = Math.floor(Math.random() * 4);
-            const pkg = packages[pkgId];
-            const stakeAmount = (Math.floor(Math.random() * 10) + 1) * 1000;
-            const startDate = new Date(now.getTime() - Math.random() * 60 * 86400000);
-            const unlockDate = new Date(startDate.getTime() + pkg.lockPeriod * 1000);
-            const isWithdrawn = unlockDate < now && Math.random() > 0.5;
-            const rewardTotal = stakeAmount * (pkg.apy / 10000) * (pkg.lockPeriod / (365 * 86400));
-            const rewardClaimed = isWithdrawn ? rewardTotal : rewardTotal * Math.random() * 0.5;
-
-            stakeIdCounter++;
-            const stakeTxHash = randomTxHash();
-
-            const position = await prisma.stakePosition.upsert({
-                where: { stakeTxHash },
-                update: {},
-                create: {
-                    walletId: wallet.id,
-                    contractId: stakingContract.id,
-                    packageId: pkg.id,
-                    onChainStakeId: stakeIdCounter,
-                    onChainPackageId: pkgId,
-                    principal: toTokenAmount(stakeAmount, 18),
-                    rewardTotal: toTokenAmount(rewardTotal, 6),
-                    rewardClaimed: toTokenAmount(rewardClaimed, 6),
-                    lockPeriod: pkg.lockPeriod,
-                    startTimestamp: startDate,
-                    unlockTimestamp: unlockDate,
-                    lastClaimTimestamp: rewardClaimed > 0 ? new Date(startDate.getTime() + Math.random() * (now.getTime() - startDate.getTime())) : null,
-                    isWithdrawn,
-                    isEmergencyWithdrawn: false,
-                    stakeTxHash,
-                    withdrawTxHash: isWithdrawn ? randomTxHash() : null,
-                },
-            });
-
-            await prisma.transaction.upsert({
-                where: { txHash: stakeTxHash },
-                update: {},
-                create: {
-                    walletId: wallet.id,
-                    chainId: sepolia.id,
-                    stakePositionId: position.id,
-                    type: TransactionType.STAKE,
-                    status: TransactionStatus.CONFIRMED,
-                    amount: toTokenAmount(stakeAmount, 18),
-                    txHash: stakeTxHash,
-                    blockNumber: BigInt(Math.floor(Math.random() * 1000000) + 5000000),
-                    gasUsed: '150000',
-                    gasPrice: '20000000000',
-                    confirmedAt: startDate,
-                },
-            });
-
-            if (rewardClaimed > 0) {
-                const claimTxHash = randomTxHash();
-                await prisma.transaction.upsert({
-                    where: { txHash: claimTxHash },
-                    update: {},
-                    create: {
-                        walletId: wallet.id,
-                        chainId: sepolia.id,
-                        stakePositionId: position.id,
-                        type: TransactionType.CLAIM,
-                        status: TransactionStatus.CONFIRMED,
-                        amount: toTokenAmount(rewardClaimed, 6),
-                        txHash: claimTxHash,
-                        blockNumber: BigInt(Math.floor(Math.random() * 1000000) + 5500000),
-                        gasUsed: '80000',
-                        gasPrice: '25000000000',
-                        confirmedAt: position.lastClaimTimestamp || now,
-                    },
-                });
-            }
-
-            if (isWithdrawn && position.withdrawTxHash) {
-                await prisma.transaction.upsert({
-                    where: { txHash: position.withdrawTxHash },
-                    update: {},
-                    create: {
-                        walletId: wallet.id,
-                        chainId: sepolia.id,
-                        stakePositionId: position.id,
-                        type: TransactionType.WITHDRAW,
-                        status: TransactionStatus.CONFIRMED,
-                        amount: toTokenAmount(stakeAmount, 18),
-                        txHash: position.withdrawTxHash,
-                        blockNumber: BigInt(Math.floor(Math.random() * 1000000) + 6000000),
-                        gasUsed: '100000',
-                        gasPrice: '22000000000',
-                        confirmedAt: unlockDate,
-                    },
-                });
-            }
-        }
-
-        const userPositions = await prisma.stakePosition.findMany({
-            where: { walletId: wallet.id },
-        });
-
-        const stats = {
-            totalStaked: userPositions.reduce((sum, p) => sum + BigInt(p.principal), BigInt(0)),
-            totalClaimed: userPositions.reduce((sum, p) => sum + BigInt(p.rewardClaimed), BigInt(0)),
-            totalWithdrawn: userPositions.filter(p => p.isWithdrawn).reduce((sum, p) => sum + BigInt(p.principal), BigInt(0)),
-            activeStakes: userPositions.filter(p => !p.isWithdrawn).length,
-            completedStakes: userPositions.filter(p => p.isWithdrawn).length,
-        };
-
-        await prisma.userStatistics.upsert({
-            where: { userId: user.id },
-            update: {
-                totalStaked: stats.totalStaked.toString(),
-                totalClaimed: stats.totalClaimed.toString(),
-                totalWithdrawn: stats.totalWithdrawn.toString(),
-                activeStakes: stats.activeStakes,
-                completedStakes: stats.completedStakes,
-            },
-            create: {
-                userId: user.id,
-                totalStaked: stats.totalStaked.toString(),
-                totalClaimed: stats.totalClaimed.toString(),
-                totalWithdrawn: stats.totalWithdrawn.toString(),
-                activeStakes: stats.activeStakes,
-                completedStakes: stats.completedStakes,
-                pendingRewards: '0',
-            },
-        });
-    }
-
-    await prisma.blockchainSync.upsert({
-        where: {
-            chainId_contractAddress: {
-                chainId: sepolia.id,
-                contractAddress: contractAddress,
-            },
-        },
-        update: { status: 'COMPLETED', lastSyncAt: now },
-        create: {
-            chainId: sepolia.id,
-            contractAddress: contractAddress,
-            lastProcessedBlock: BigInt(6500000),
-            currentBlock: BigInt(6500100),
-            status: 'COMPLETED',
-            lastSyncAt: now,
-        },
-    });
-
-    const eventNames = ['Staked', 'Claimed', 'Withdrawn', 'PackageUpdated'];
-    for (let i = 0; i < 20; i++) {
-        const txHash = randomTxHash();
-        await prisma.blockchainEvent.upsert({
-            where: { txHash_logIndex: { txHash, logIndex: 0 } },
-            update: {},
-            create: {
-                chainId: sepolia.id,
-                eventName: eventNames[Math.floor(Math.random() * eventNames.length)],
-                contractAddress: contractAddress,
-                txHash,
-                blockNumber: BigInt(6500000 - i * 100),
-                logIndex: 0,
-                eventData: { sample: true, index: i },
-                processed: true,
-                processedAt: new Date(now.getTime() - i * 3600000),
-            },
-        });
-    }
-
-    const summary = await prisma.$transaction([
-        prisma.user.count(),
-        prisma.userWallet.count(),
-        prisma.stakePosition.count(),
-        prisma.transaction.count(),
-    ]);
-
-    console.log('\n🎉 Seed completed successfully!');
-    console.log('━'.repeat(40));
-    console.log(`   Users: ${summary[0]}`);
-    console.log(`   Wallets: ${summary[1]}`);
-    console.log(`   Stake Positions: ${summary[2]}`);
-    console.log(`   Transactions: ${summary[3]}`);
-    console.log('━'.repeat(40));
-    console.log('\n📝 Test credentials:');
-    console.log('   Admin: admin@yieldstaking.com / 123');
-    console.log('   Users: alice@test.com, bob@test.com, etc. / 123');
+    console.log('\nSeed completed!');
+    console.log('Chain: Sepolia (11155111)');
+    console.log(`Contract: ${contractAddress}`);
+    console.log(`USDT: ${usdtAddress}`);
+    console.log(`AUREUS: ${aureusAddress}`);
+    console.log('\nCredentials:');
+    console.log('  admin@yieldstaking.com / 123  ->  ' + usersData[0].walletAddress);
+    console.log('  user1@yieldstaking.com / 123  ->  ' + usersData[1].walletAddress);
+    console.log('  user2@yieldstaking.com / 123  ->  ' + usersData[2].walletAddress);
 }
 
 main()
     .catch((e) => {
-        console.error('❌ Seed failed:', e);
+        console.error('Seed failed:', e);
         process.exit(1);
     })
     .finally(async () => {

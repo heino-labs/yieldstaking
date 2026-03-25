@@ -85,10 +85,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
     const isAdmin = profile?.role === 'ADMIN';
 
     const navItems = React.useMemo(() => {
-        if (isAdmin) {
-            return [...userNavItems, ...adminNavItems];
-        }
-        return userNavItems;
+        return isAdmin ? adminNavItems : userNavItems;
     }, [isAdmin]);
 
     return (

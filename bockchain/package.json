@@ -10,7 +10,9 @@
         "node": "hardhat node",
         "deploy": "hardhat run scripts/deploy.ts --network sepolia",
         "deploy:local": "hardhat run scripts/deploy.ts --network localhost",
-        "verify": "hardhat verify",
+        "verify:usdt": "hardhat verify --network sepolia 0xf3600F395aA93550242Ef2ACcD1aeE6502486D0D 0x237Dee4c976E3c4861fE6a99fBa1D60f0E72F464",
+        "verify:aureus": "hardhat verify --network sepolia 0x480799dA06AA36b25398B87E7dAd110bec837Edf 0x237Dee4c976E3c4861fE6a99fBa1D60f0E72F464",
+        "verify:staking": "hardhat verify --network sepolia 0x996DCEAf240ed245fb7Cf775cC5E2863Bb710e07 0x237Dee4c976E3c4861fE6a99fBa1D60f0E72F464 0xe4101FF2B8097BB4346cBab3aD4E7b40EF370460 0x480799dA06AA36b25398B87E7dAd110bec837Edf 0xf3600F395aA93550242Ef2ACcD1aeE6502486D0D",
         "coverage": "npx hardhat coverage"
     },
     "author": "BZetsu",
