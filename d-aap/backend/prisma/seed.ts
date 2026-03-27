@@ -82,24 +82,31 @@ async function main() {
 
     const hashedPassword = await bcrypt.hash('123', 12);
 
+    /** Khớp `deploy-and-fund.ts` (Admin + User1–3 đã nhận AUR) */
     const usersData = [
         {
             email: 'admin@yieldstaking.com',
             name: 'Platform Admin',
             role: 'ADMIN' as const,
-            walletAddress: '0x237Dee4c976E3c4861fE6a99fBa1D60f0E72F464',
+            walletAddress: '0xbCFA78C21c901ba2466093DD4bF288090FdB0845',
         },
         {
             email: 'user1@yieldstaking.com',
             name: 'User One',
             role: 'USER' as const,
-            walletAddress: '0x8fC341361fD05D8D93D69745FD6FeCeE6927Bc27',
+            walletAddress: '0xeEf28E4C0db920aB5b21ba256fD02F46f7Ed2993',
         },
         {
             email: 'user2@yieldstaking.com',
             name: 'User Two',
             role: 'USER' as const,
-            walletAddress: '0x16C750389a585545cd7D52Feba7640cFD7c77Ef7',
+            walletAddress: '0x47efaC5f4f21e798DE3171B0bf35b5D08636ACA6',
+        },
+        {
+            email: 'user3@yieldstaking.com',
+            name: 'User Three',
+            role: 'USER' as const,
+            walletAddress: '0x506cd8Ac772Ceeecc43B2fAD6C9c6528214c0667',
         },
     ];
 
@@ -143,6 +150,7 @@ async function main() {
     console.log('  admin@yieldstaking.com / 123  ->  ' + usersData[0].walletAddress);
     console.log('  user1@yieldstaking.com / 123  ->  ' + usersData[1].walletAddress);
     console.log('  user2@yieldstaking.com / 123  ->  ' + usersData[2].walletAddress);
+    console.log('  user3@yieldstaking.com / 123  ->  ' + usersData[3].walletAddress);
 }
 
 main()

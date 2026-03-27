@@ -163,38 +163,44 @@ When paused:
 - `stake`, `claim`, `withdraw` are disabled
 - `emergencyWithdraw` is allowed (Operator only)
 
-# Verify
+# Sepolia (deploy + fund gần nhất)
 
-
-MockUSDT: 0x916a38BFf7a7fdA1A25EaEF64345172C04c2bdb2
-Aureus: 0x87b82b039E9F6a919cE5aE17DBE66Fad091F15b9
-YieldStaking: 0x2d58F549ce83D5125d198e1ef36e2E7c1fF6bc6F
-Admin: 0x237Dee4c976E3c4861fE6a99fBa1D60f0E72F464
-Operator: 0xe4101FF2B8097BB4346cBab3aD4E7b40EF370460
+MockUSDT: `0x5F987eA88cE33C69778A5e954dBCcA6109A576D9`  
+Aureus: `0x54B7C6F32C3B55Bf9af53BB9377ceAAfA9970744`  
+YieldStaking: `0x13C1bB261eBE0bc80C7CD208E72D2F14DB26a7B8`  
+Admin: `0xbCFA78C21c901ba2466093DD4bF288090FdB0845`  
+Operator: `0xbCFA78C21c901ba2466093DD4bF288090FdB0845` (cùng Admin nếu không set `TN_OPERATOR_ADDRESS`)
 
 ---
 
-npx hardhat verify --network sepolia 0x2d58F549ce83D5125d198e1ef36e2E7c1fF6bc6F \
+## Verify (tương đương `npm run verify:*` trong `bockchain/package.json`)
+
+```bash
+npx hardhat verify --network sepolia 0x13C1bB261eBE0bc80C7CD208E72D2F14DB26a7B8 \
   --contract "contracts/YieldStaking.sol:YieldStaking" \
-  0x237Dee4c976E3c4861fE6a99fBa1D60f0E72F464 0xe4101FF2B8097BB4346cBab3aD4E7b40EF370460 \
-  0x87b82b039E9F6a919cE5aE17DBE66Fad091F15b9 0x916a38BFf7a7fdA1A25EaEF64345172C04c2bdb2
+  0xbCFA78C21c901ba2466093DD4bF288090FdB0845 0xbCFA78C21c901ba2466093DD4bF288090FdB0845 \
+  0x54B7C6F32C3B55Bf9af53BB9377ceAAfA9970744 0x5F987eA88cE33C69778A5e954dBCcA6109A576D9
+```
 
-https://sepolia.etherscan.io/address/0x2d58F549ce83D5125d198e1ef36e2E7c1fF6bc6F#code
+https://sepolia.etherscan.io/address/0x13C1bB261eBE0bc80C7CD208E72D2F14DB26a7B8#code
 
 ---
 
-npx hardhat verify --network sepolia 0x87b82b039E9F6a919cE5aE17DBE66Fad091F15b9 \
+```bash
+npx hardhat verify --network sepolia 0x54B7C6F32C3B55Bf9af53BB9377ceAAfA9970744 \
   --contract "contracts/Aureus.sol:Aureus" \
-  0x237Dee4c976E3c4861fE6a99fBa1D60f0E72F464
+  0xbCFA78C21c901ba2466093DD4bF288090FdB0845
+```
 
-https://sepolia.etherscan.io/address/0x87b82b039E9F6a919cE5aE17DBE66Fad091F15b9#code
-
+https://sepolia.etherscan.io/address/0x54B7C6F32C3B55Bf9af53BB9377ceAAfA9970744#code
 
 ---
 
-npx hardhat verify --network sepolia 0x916a38BFf7a7fdA1A25EaEF64345172C04c2bdb2 \
+```bash
+npx hardhat verify --network sepolia 0x5F987eA88cE33C69778A5e954dBCcA6109A576D9 \
   --contract "contracts/mock/USDT.sol:MockUSDT" \
-  0x237Dee4c976E3c4861fE6a99fBa1D60f0E72F464
+  0xbCFA78C21c901ba2466093DD4bF288090FdB0845
+```
 
-https://sepolia.etherscan.io/address/0x916a38BFf7a7fdA1A25EaEF64345172C04c2bdb2#code
+https://sepolia.etherscan.io/address/0x5F987eA88cE33C69778A5e954dBCcA6109A576D9#code
 
