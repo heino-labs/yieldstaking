@@ -37,32 +37,23 @@ import {
 export interface RewardHistoryItem {
     id: string;
     packageId: number;
-    stakeId: number;
-    lockPeriod: string;
+    amount: string;
+    claimedAt: string;
     apy: number;
-    stakedAmount: string;
-    totalRewards: string;
-    claimed: string;
-    pending: string;
-    lastClaim: string;
-    status: 'active' | 'completed' | 'unlocked';
+    rewardSymbol: string;
+    rewardDecimals: number;
     txHash?: string;
+    positionId?: number;
 }
 
 interface RewardHistoryTableProps {
     data: RewardHistoryItem[];
     explorerUrl?: string;
-    contractAddress?: string;
-    stakeSymbol?: string;
-    rewardSymbol?: string;
 }
 
 export function RewardHistoryTable({ 
     data, 
     explorerUrl = 'https://sepolia.etherscan.io',
-    contractAddress,
-    stakeSymbol = 'AUR',
-    rewardSymbol = 'USDT',
 }: RewardHistoryTableProps) {
     const [sorting, setSorting] = React.useState<SortingState>([]);
     const [columnFilters, setColumnFilters] = React.useState<ColumnFiltersState>([]);
@@ -74,7 +65,16 @@ export function RewardHistoryTable({
 
     const columns: ColumnDef<RewardHistoryItem>[] = React.useMemo(() => [
         {
-            accessorKey: 'lockPeriod',
+            accessorKey: 'claimedAt',
+            header: 'Date',
+            cell: ({ row }) => (
+                <div className="text-sm font-medium">
+                    {new Date(row.original.claimedAt).toLocaleString()}
+                </div>
+            ),
+        },
+        {
+            accessorKey: 'packageId',
             header: 'Package',
             cell: ({ row }) => (
                 <div className="flex items-center gap-2">
@@ -82,104 +82,44 @@ export function RewardHistoryTable({
                         A
                     </div>
                     <div>
-                        <div className="font-medium">{row.original.lockPeriod}</div>
+                        <div className="font-medium">{row.original.packageId} Days Package</div>
                         <div className="text-xs text-muted-foreground">{row.original.apy}% APY</div>
                     </div>
                 </div>
             ),
         },
         {
-            accessorKey: 'stakedAmount',
-            header: 'Staked',
+            accessorKey: 'amount',
+            header: 'Amount',
             cell: ({ row }) => {
-                const amount = BigInt(row.original.stakedAmount || '0');
+                const amount = BigInt(row.original.amount || '0');
                 return (
-                    <div className="font-medium">
-                        {formatTokenAmount(amount, 18, 2)} AUR
-                    </div>
-                );
-            },
-        },
-        {
-            accessorKey: 'totalRewards',
-            header: 'Total Rewards',
-            cell: ({ row }) => {
-                const amount = BigInt(row.original.totalRewards || '0');
-                return (
-                    <span className="text-green-600 dark:text-green-400 font-medium">
-                        +{formatTokenAmount(amount, 18, 4)} USDT
+                    <span className="text-green-600 dark:text-green-400 font-bold text-lg">
+                        +{formatTokenAmount(amount, row.original.rewardDecimals, 4)} {row.original.rewardSymbol}
                     </span>
                 );
             },
-        },
-        {
-            accessorKey: 'claimed',
-            header: 'Claimed',
-            cell: ({ row }) => {
-                const amount = BigInt(row.original.claimed || '0');
-                return (
-                    <span>
-                        {formatTokenAmount(amount, 18, 4)} USDT
-                    </span>
-                );
-            },
-        },
-        {
-            accessorKey: 'pending',
-            header: 'Pending',
-            cell: ({ row }) => {
-                const amount = BigInt(row.original.pending || '0');
-                return (
-                    <span className="font-medium text-green-600 dark:text-green-400">
-                        +{formatTokenAmount(amount, 18, 4)} USDT
-                    </span>
-                );
-            },
-        },
-        {
-            accessorKey: 'status',
-            header: 'Status',
-            cell: ({ row }) => {
-                const status = row.original.status;
-                return (
-                    <Badge 
-                        variant="outline" 
-                        className={
-                            status === 'unlocked' 
-                                ? 'border-green-500 text-green-500' 
-                                : status === 'completed'
-                                ? 'border-muted-foreground text-muted-foreground'
-                                : 'border-primary text-primary'
-                        }
-                    >
-                        {status === 'unlocked' ? 'Unlocked' : status === 'completed' ? 'Completed' : 'Active'}
-                    </Badge>
-                );
-            },
-        },
-        {
-            accessorKey: 'lastClaim',
-            header: 'Last Claim',
-            cell: ({ row }) => (
-                <span className="text-muted-foreground text-sm">{row.original.lastClaim}</span>
-            ),
         },
         {
             id: 'etherscan',
-            header: '',
-            cell: () => (
-                <a
-                    href={contractAddress ? `${explorerUrl}/address/${contractAddress}` : explorerUrl}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="inline-flex items-center gap-1 text-sm text-primary hover:underline"
-                >
-                    View
-                    <ExternalLink className="size-3" />
-                </a>
+            header: 'Transaction',
+            cell: ({ row }) => (
+                row.original.txHash ? (
+                    <a
+                        href={`${explorerUrl}/tx/${row.original.txHash}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="inline-flex items-center gap-1 text-sm text-primary hover:underline"
+                    >
+                        View on Explorer
+                        <ExternalLink className="size-3" />
+                    </a>
+                ) : (
+                    <span className="text-muted-foreground text-sm">N/A</span>
+                )
             ),
         },
-    ], [explorerUrl, contractAddress, stakeSymbol, rewardSymbol]);
+    ], [explorerUrl]);
 
     const table = useReactTable({
         data,

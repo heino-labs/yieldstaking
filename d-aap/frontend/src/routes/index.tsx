@@ -18,12 +18,14 @@ const AuthErrorPage = lazy(() => import('@/pages/auth/error'));
 const YieldStakingPage = lazy(() => import('@/pages/aureus/yield-staking'));
 const StakePage = lazy(() => import('@/pages/aureus/stake'));
 const WithdrawalsPage = lazy(() => import('@/pages/aureus/withdrawals'));
+const StakeHistoryPage = lazy(() => import('@/pages/aureus/stake-history'));
 const RewardHistoryPage = lazy(() => import('@/pages/aureus/reward-history'));
 
 // Management pages
 const ManagementDashboardPage = lazy(() => import('@/pages/management/index'));
 const ManagementUsersPage = lazy(() => import('@/pages/management/users'));
 const ManagementPositionsPage = lazy(() => import('@/pages/management/positions'));
+const ManagementTransactionsPage = lazy(() => import('@/pages/management/transactions'));
 
 // Network pages
 const NetworkDashboardPage = lazy(() => import('@/pages/network/index'));
@@ -99,6 +101,14 @@ export const routes: RouteObject[] = [
                 ),
             },
             {
+                path: 'stake-history',
+                element: (
+                    <ProtectedPage>
+                        <StakeHistoryPage />
+                    </ProtectedPage>
+                ),
+            },
+            {
                 path: 'reward-history',
                 element: (
                     <ProtectedPage>
@@ -131,6 +141,14 @@ export const routes: RouteObject[] = [
                         element: (
                             <AdminPage>
                                 <ManagementPositionsPage />
+                            </AdminPage>
+                        ),
+                    },
+                    {
+                        path: 'transactions',
+                        element: (
+                            <AdminPage>
+                                <ManagementTransactionsPage />
                             </AdminPage>
                         ),
                     },

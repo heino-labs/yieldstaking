@@ -290,6 +290,7 @@ export class TransactionService {
                         ? `${tx.chain.explorerUrl}/tx/${tx.txHash}`
                         : null,
                 packageId: tx.stakePosition?.onChainPackageId,
+                positionId: tx.stakePositionId,
                 apy: tx.stakePosition?.package?.apy,
                 claimedAt: tx.confirmedAt,
             })),

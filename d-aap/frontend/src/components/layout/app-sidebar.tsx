@@ -36,6 +36,10 @@ const userNavItems = [
                 url: '/app/withdrawals',
             },
             {
+                title: 'Stake History',
+                url: '/app/stake-history',
+            },
+            {
                 title: 'Reward History',
                 url: '/app/reward-history',
             },
@@ -60,6 +64,10 @@ const adminNavItems = [
             {
                 title: 'Positions',
                 url: '/app/management/positions',
+            },
+            {
+                title: 'Transactions',
+                url: '/app/management/transactions',
             },
         ],
     },

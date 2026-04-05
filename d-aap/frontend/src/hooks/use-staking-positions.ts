@@ -21,6 +21,7 @@ export interface StakingPositionView {
     rewardSymbol: string;
     contractAddress?: string;
     lockPeriodLabel: string;
+    startDateLabel: string;
     stakedAmount: string;
     totalRewards: string;
     claimedRewards: string;
@@ -34,15 +35,17 @@ export interface StakingPositionView {
     status: 'active' | 'unlocked' | 'completed';
 }
 
-function formatDate(dateValue?: string | null): string {
+function formatDateTime(dateValue?: string | null): string {
     if (!dateValue) return '-';
     const date = new Date(dateValue);
     if (Number.isNaN(date.getTime())) return '-';
 
-    return date.toLocaleDateString('en-US', {
+    return date.toLocaleString('en-US', {
         month: 'short',
         day: 'numeric',
         year: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit',
     });
 }
 
@@ -95,7 +98,7 @@ export function useStakingPositionsView(
             const withdrawn = position.isWithdrawn;
 
             return {
-                id: `${position.onChainPackageId}-${position.onChainStakeId}`,
+                id: position.id.toString(),
                 packageId: position.onChainPackageId,
                 stakeId: position.onChainStakeId,
                 apy: Number(position.package?.apy ?? 0) / 100,
@@ -109,12 +112,13 @@ export function useStakingPositionsView(
                 rewardSymbol: position.contract?.rewardTokenSymbol ?? 'USDT',
                 contractAddress: position.contract?.address,
                 lockPeriodLabel: formatLockPeriod(position.lockPeriod),
+                startDateLabel: formatDateTime(position.startTimestamp),
                 stakedAmount: formatTokenAmount(principalRaw, stakeTokenDecimals, 2),
                 totalRewards: formatTokenAmount(rewardTotalRaw, rewardTokenDecimals, 4),
                 claimedRewards: formatTokenAmount(rewardClaimedRaw, rewardTokenDecimals, 4),
                 pendingRewards: formatTokenAmount(claimableRewardRaw, rewardTokenDecimals, 4),
-                unlockDateLabel: formatDate(position.unlockTimestamp),
-                lastClaimLabel: formatDate(position.lastClaimTimestamp),
+                unlockDateLabel: formatDateTime(position.unlockTimestamp),
+                lastClaimLabel: formatDateTime(position.lastClaimTimestamp),
                 unlockTimestampMs,
                 unlocked,
                 timeRemaining: formatTimeRemaining(unlockTimestampMs),

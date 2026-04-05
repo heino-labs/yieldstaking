@@ -37,6 +37,7 @@ export default function WithdrawalsPage() {
                 packageId: position.packageId,
                 stakeId: position.stakeId,
                 lockPeriod: position.lockPeriodLabel,
+                startDate: position.startDateLabel,
                 apy: position.apy,
                 stakedAmount: position.principalRaw.toString(),
                 claimable: position.claimableRewardRaw.toString(),
@@ -182,7 +183,7 @@ export default function WithdrawalsPage() {
                                                         {selected.lockPeriodLabel} Package
                                                     </div>
                                                     <div className="text-sm text-muted-foreground">
-                                                        Principal in {selected.stakeSymbol}, rewards in {selected.rewardSymbol}
+                                                        Stake #{selected.stakeId} • Principal in {selected.stakeSymbol}, rewards in {selected.rewardSymbol}
                                                     </div>
                                                 </div>
                                             </div>
@@ -201,6 +202,12 @@ export default function WithdrawalsPage() {
                                         </div>
 
                                         <div className="space-y-3">
+                                            <div className="flex justify-between text-sm">
+                                                <span className="text-muted-foreground">Staked At</span>
+                                                <span className="font-semibold">
+                                                    {selected.startDateLabel}
+                                                </span>
+                                            </div>
                                             <div className="flex justify-between text-sm">
                                                 <span className="text-muted-foreground">Staked Amount</span>
                                                 <span className="font-semibold">

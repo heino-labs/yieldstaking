@@ -16,6 +16,7 @@ import {
 
 import { GetTransactionsDto } from "./dto/transaction.dto";
 import { TransactionService } from "./transaction.service";
+import { StakingService } from "../staking/staking.service";
 import { JwtAuthGuard } from "../../auth/guard/jwt-auth.guard";
 import { RolesGuard } from "../../auth/guard/roles.guard";
 import { AuthenticatedRequest } from "../../auth/interface/authenticated-request.interface";
@@ -25,7 +26,10 @@ import { AuthenticatedRequest } from "../../auth/interface/authenticated-request
 @UseGuards(JwtAuthGuard, RolesGuard)
 @ApiBearerAuth("access-token")
 export class TransactionController {
-    constructor(private readonly transactionService: TransactionService) {}
+    constructor(
+        private readonly transactionService: TransactionService,
+        private readonly stakingService: StakingService,
+    ) {}
 
     @Get()
     @ApiOperation({ summary: "Get transactions for authenticated user" })
@@ -113,6 +117,36 @@ export class TransactionController {
             page || 1,
             limit || 10,
         );
+    }
+
+    @Get("rewards/summary")
+    @ApiOperation({ summary: "Get reward summary for authenticated user" })
+    @ApiResponse({
+        status: 200,
+        description: "Reward summary retrieved successfully",
+    })
+    async getMyRewardSummary(@Request() req: AuthenticatedRequest) {
+        const wallet = await this.transactionService.getUserPrimaryWallet(
+            req.user.id,
+        );
+
+        if (!wallet) {
+            return {
+                totalRewardEarned: "0",
+                totalRewardClaimed: "0",
+                pendingRewards: "0",
+            };
+        }
+
+        const summary = await this.stakingService.getStakePositionsSummary(
+            wallet.walletAddress,
+        );
+
+        return {
+            totalRewardEarned: summary.totalRewardEarned,
+            totalRewardClaimed: summary.totalRewardClaimed,
+            pendingRewards: summary.totalPendingReward,
+        };
     }
 
     @Get(":txHash")

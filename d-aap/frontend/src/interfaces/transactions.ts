@@ -1,10 +1,10 @@
-export type TransactionType = 'STAKE' | 'CLAIM' | 'WITHDRAW' | 'EMERGENCY_WITHDRAW';
-export type TransactionStatus = 'PENDING' | 'CONFIRMED' | 'FAILED';
+export type StakingTransactionType = 'STAKE' | 'CLAIM' | 'WITHDRAW' | 'EMERGENCY_WITHDRAW';
+export type StakingTransactionStatus = 'PENDING' | 'CONFIRMED' | 'FAILED';
 
-export interface Transaction {
+export interface StakingTransaction {
     id: number;
-    type: TransactionType;
-    status: TransactionStatus;
+    type: StakingTransactionType;
+    status: StakingTransactionStatus;
     amount: string;
     txHash: string | null;
     blockNumber: string | null;
@@ -24,8 +24,8 @@ export interface Transaction {
     };
 }
 
-export interface TransactionListResponse {
-    transactions: Transaction[];
+export interface StakingTransactionListResponse {
+    transactions: StakingTransaction[];
     total: number;
     page: number;
     limit: number;
@@ -39,6 +39,25 @@ export interface TransactionSummary {
     stakeCount: number;
     claimCount: number;
     withdrawCount: number;
+}
+
+export interface RewardHistoryItem {
+    id: number;
+    amount: string;
+    txHash: string | null;
+    explorerUrl: string | null;
+    packageId: number | null;
+    positionId: number | null;
+    apy: number | null;
+    claimedAt: string | null;
+}
+
+export interface RewardHistoryResponse {
+    rewards: RewardHistoryItem[];
+    total: number;
+    page: number;
+    limit: number;
+    totalPages: number;
 }
 
 export interface RewardSummary {

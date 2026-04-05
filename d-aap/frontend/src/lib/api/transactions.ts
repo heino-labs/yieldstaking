@@ -1,15 +1,15 @@
 import { api } from './client';
 import { handleApiError } from '../utils/api-error-handler';
 
-import type { TransactionListResponse, TransactionSummary, RewardSummary, Transaction } from '@/interfaces';
+import type { StakingTransactionListResponse, TransactionSummary, RewardSummary, StakingTransaction, RewardHistoryResponse } from '@/interfaces';
 
 export async function fetchTransactions(params?: {
     page?: number;
     limit?: number;
     type?: string;
-}): Promise<TransactionListResponse> {
+}): Promise<StakingTransactionListResponse> {
     try {
-        return await api.get<TransactionListResponse>('/v1/transactions', { params });
+        return await api.get<StakingTransactionListResponse>('/v1/transactions', { params });
     } catch (error: unknown) {
         throw handleApiError({
             error,
@@ -18,9 +18,9 @@ export async function fetchTransactions(params?: {
     }
 }
 
-export async function fetchTransactionByHash(txHash: string): Promise<Transaction> {
+export async function fetchTransactionByHash(txHash: string): Promise<StakingTransaction> {
     try {
-        return await api.get<Transaction>(`/v1/transactions/hash/${txHash}`);
+        return await api.get<StakingTransaction>(`/v1/transactions/hash/${txHash}`);
     } catch (error: unknown) {
         throw handleApiError({
             error,
@@ -40,9 +40,23 @@ export async function fetchTransactionSummary(): Promise<TransactionSummary> {
     }
 }
 
+export async function fetchRewardHistory(params?: {
+    page?: number;
+    limit?: number;
+}): Promise<RewardHistoryResponse> {
+    try {
+        return await api.get<RewardHistoryResponse>('/v1/transactions/rewards', { params });
+    } catch (error: unknown) {
+        throw handleApiError({
+            error,
+            context: 'Failed to fetch reward history',
+        });
+    }
+}
+
 export async function fetchRewardSummary(): Promise<RewardSummary> {
     try {
-        return await api.get<RewardSummary>('/v1/transactions/rewards');
+        return await api.get<RewardSummary>('/v1/transactions/rewards/summary');
     } catch (error: unknown) {
         throw handleApiError({
             error,

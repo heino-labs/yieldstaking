@@ -7,10 +7,10 @@ import {
     useReactTable,
 } from '@tanstack/react-table';
 import { IconChevronLeft, IconChevronRight } from '@tabler/icons-react';
-import { ExternalLink, Unlock, Clock, Gift } from 'lucide-react';
+import { ExternalLink, CheckCircle2, Gift } from 'lucide-react';
 import { Link } from 'react-router-dom';
 
-import { formatTokenAmount, formatTokenAmountWithFloor } from '@/lib/utils/format';
+import { formatTokenAmount } from '@/lib/utils/format';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import {
@@ -22,7 +22,7 @@ import {
     TableRow,
 } from '@/components/ui/table';
 
-export interface StakedPackageItem {
+export interface CompletedStakeItem {
     id: string;
     packageId: number;
     stakeId: number;
@@ -30,42 +30,33 @@ export interface StakedPackageItem {
     startDate: string;
     apy: number;
     stakedAmount: string;
-    claimable: string;
+    totalRewards: string;
     unlockDate: string;
-    timeRemaining: string;
-    isUnlocked: boolean;
+    withdrawDate: string;
+    stakeDecimals: number;
+    rewardDecimals: number;
+    stakeSymbol: string;
+    rewardSymbol: string;
 }
 
-interface StakedPackagesTableProps {
-    data: StakedPackageItem[];
-    selectedId?: string | null;
-    onSelect?: (id: string) => void;
+interface CompletedStakesTableProps {
+    data: CompletedStakeItem[];
     explorerUrl?: string;
     contractAddress?: string;
-    stakeSymbol?: string;
-    rewardSymbol?: string;
-    stakeDecimals?: number;
-    rewardDecimals?: number;
 }
 
-export function StakedPackagesTable({ 
+export function CompletedStakesTable({ 
     data, 
-    selectedId,
-    onSelect,
     explorerUrl = 'https://sepolia.etherscan.io',
     contractAddress,
-    stakeSymbol = 'AUR',
-    rewardSymbol = 'USDT',
-    stakeDecimals = 18,
-    rewardDecimals = 6,
-}: StakedPackagesTableProps) {
-    const columns: ColumnDef<StakedPackageItem>[] = React.useMemo(() => [
+}: CompletedStakesTableProps) {
+    const columns: ColumnDef<CompletedStakeItem>[] = React.useMemo(() => [
         {
             accessorKey: 'lockPeriod',
             header: 'Package',
             cell: ({ row }) => (
                 <div className="flex items-center gap-2">
-                    <div className="w-8 h-8 rounded-full bg-gradient-to-br from-amber-400 to-yellow-600 flex items-center justify-center text-white text-xs font-bold">
+                    <div className="w-8 h-8 rounded-full bg-muted flex items-center justify-center text-muted-foreground text-xs font-bold">
                         A
                     </div>
                     <div>
@@ -80,71 +71,71 @@ export function StakedPackagesTable({
         },
         {
             accessorKey: 'stakedAmount',
-            header: 'Staked',
+            header: 'Staked Amount',
             cell: ({ row }) => {
                 const amount = BigInt(row.original.stakedAmount || '0');
                 return (
                     <div className="font-medium">
-                        {formatTokenAmount(amount, stakeDecimals, 2)} {stakeSymbol}
+                        {formatTokenAmount(amount, row.original.stakeDecimals, 2)} {row.original.stakeSymbol}
                     </div>
                 );
             },
         },
         {
-            accessorKey: 'claimable',
-            header: 'Claimable',
+            accessorKey: 'totalRewards',
+            header: 'Total Rewards',
             cell: ({ row }) => {
-                const amount = BigInt(row.original.claimable || '0');
-                const displayAmount = formatTokenAmountWithFloor(amount, rewardDecimals, 4);
+                const amount = BigInt(row.original.totalRewards || '0');
                 return (
                     <span className="font-medium text-green-600 dark:text-green-400">
-                        {displayAmount.startsWith('< ') ? displayAmount : `+${displayAmount}`}{' '}
-                        {rewardSymbol}
+                        +{formatTokenAmount(amount, row.original.rewardDecimals, 4)} {row.original.rewardSymbol}
                     </span>
                 );
             },
         },
         {
-            accessorKey: 'status',
-            header: 'Status',
-            cell: ({ row }) => {
-                const isUnlocked = row.original.isUnlocked;
-                return isUnlocked ? (
-                    <Badge variant="outline" className="border-green-500 text-green-500">
-                        <Unlock className="h-3 w-3 mr-1" />
-                        Unlocked
-                    </Badge>
-                ) : (
-                    <Badge variant="outline" className="border-muted-foreground text-muted-foreground">
-                        <Clock className="h-3 w-3 mr-1" />
-                        {row.original.timeRemaining}
-                    </Badge>
-                );
-            },
-        },
-        {
-            id: 'actions',
-            header: '',
+            accessorKey: 'withdrawDate',
+            header: 'Withdrawn At',
             cell: ({ row }) => (
-                <div className="flex items-center gap-2">
-                    <Button variant="ghost" size="sm" asChild className="h-8 px-2 text-primary" onClick={(e) => e.stopPropagation()}>
-                        <Link to={`/app/reward-history?positionId=${row.original.id}`}>
-                            <Gift className="h-3 w-3" />
-                        </Link>
-                    </Button>
-                    <a
-                        href={contractAddress ? `${explorerUrl}/address/${contractAddress}` : explorerUrl}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="inline-flex items-center gap-1 text-sm text-primary hover:underline"
-                        onClick={(e) => e.stopPropagation()}
-                    >
-                        <ExternalLink className="size-3" />
-                    </a>
+                <div className="text-sm text-muted-foreground">
+                    {row.original.withdrawDate}
                 </div>
             ),
         },
-    ], [contractAddress, explorerUrl, rewardDecimals, rewardSymbol, stakeDecimals, stakeSymbol]);
+        {
+            accessorKey: 'status',
+            header: 'Status',
+            cell: () => (
+                <Badge variant="outline" className="border-muted-foreground text-muted-foreground bg-muted/50">
+                    <CheckCircle2 className="h-3 w-3 mr-1" />
+                    Completed
+                </Badge>
+            ),
+        },
+        {
+            id: 'actions',
+            header: 'Actions',
+            cell: ({ row }) => (
+                <div className="flex items-center gap-2">
+                    <Button variant="ghost" size="sm" asChild className="h-8 px-2 text-primary">
+                        <Link to={`/app/reward-history?positionId=${row.original.id}`}>
+                            <Gift className="mr-1 h-3 w-3" />
+                            Rewards
+                        </Link>
+                    </Button>
+                    <Button variant="ghost" size="sm" asChild className="h-8 px-2">
+                        <a
+                            href={contractAddress ? `${explorerUrl}/address/${contractAddress}` : explorerUrl}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                        >
+                            <ExternalLink className="h-3 w-3" />
+                        </a>
+                    </Button>
+                </div>
+            ),
+        },
+    ], [contractAddress, explorerUrl]);
 
     const table = useReactTable({
         data,
@@ -153,7 +144,7 @@ export function StakedPackagesTable({
         getPaginationRowModel: getPaginationRowModel(),
         initialState: {
             pagination: {
-                pageSize: 5,
+                pageSize: 10,
             },
         },
     });
@@ -180,32 +171,21 @@ export function StakedPackagesTable({
                     </TableHeader>
                     <TableBody>
                         {table.getRowModel().rows?.length ? (
-                            table.getRowModel().rows.map((row) => {
-                                const isSelected = selectedId === row.original.id;
-                                return (
-                                    <TableRow 
-                                        key={row.id}
-                                        className={`cursor-pointer transition-colors ${
-                                            isSelected 
-                                                ? 'bg-primary/10 hover:bg-primary/15' 
-                                                : 'hover:bg-muted/50'
-                                        }`}
-                                        onClick={() => onSelect?.(row.original.id)}
-                                    >
-                                        {row.getVisibleCells().map((cell) => (
-                                            <TableCell key={cell.id}>
-                                                {flexRender(cell.column.columnDef.cell, cell.getContext())}
-                                            </TableCell>
-                                        ))}
-                                    </TableRow>
-                                );
-                            })
+                            table.getRowModel().rows.map((row) => (
+                                <TableRow key={row.id}>
+                                    {row.getVisibleCells().map((cell) => (
+                                        <TableCell key={cell.id}>
+                                            {flexRender(cell.column.columnDef.cell, cell.getContext())}
+                                        </TableCell>
+                                    ))}
+                                </TableRow>
+                            ))
                         ) : (
                             <TableRow>
-                                <TableCell colSpan={columns.length} className="h-24 text-center">
+                                <TableCell colSpan={columns.length} className="h-32 text-center">
                                     <div className="flex flex-col items-center gap-2 text-muted-foreground">
-                                        <Clock className="h-8 w-8 opacity-50" />
-                                        <p>No staked packages</p>
+                                        <CheckCircle2 className="h-8 w-8 opacity-50" />
+                                        <p>No completed stakes found</p>
                                     </div>
                                 </TableCell>
                             </TableRow>
@@ -214,10 +194,10 @@ export function StakedPackagesTable({
                 </Table>
             </div>
 
-            {data.length > 5 && (
+            {data.length > 10 && (
                 <div className="flex items-center justify-between">
                     <div className="text-muted-foreground text-sm">
-                        {data.length} position(s)
+                        {data.length} completed stake(s)
                     </div>
                     <div className="flex items-center gap-2">
                         <div className="text-sm">
