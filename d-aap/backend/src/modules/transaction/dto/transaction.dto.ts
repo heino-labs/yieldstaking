@@ -33,6 +33,10 @@ export class GetTransactionsDto {
     @IsOptional()
     @IsEnum(TransactionStatus)
     status?: TransactionStatus;
+
+    @ApiPropertyOptional({ description: "Filter by wallet address" })
+    @IsOptional()
+    walletAddress?: string;
 }
 
 export class TransactionResponseDto {

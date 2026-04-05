@@ -893,7 +893,7 @@ export default function HomePage() {
                                 <ul className="space-y-2 text-sm text-muted-foreground">
                                     <li><a href="/app/stake" className="hover:text-foreground transition-colors">Stake</a></li>
                                     <li><a href="/app/withdrawals" className="hover:text-foreground transition-colors">Withdrawals</a></li>
-                                    <li><a href="/app/reward-history" className="hover:text-foreground transition-colors">Reward History</a></li>
+                                    <li><a href="/app/reward-history" className="hover:text-foreground transition-colors">Claim History</a></li>
                                     <li><a href="/app/yield-staking" className="hover:text-foreground transition-colors">Yield Staking</a></li>
                                 </ul>
                             </div>

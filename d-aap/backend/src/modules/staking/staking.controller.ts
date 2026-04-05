@@ -108,11 +108,20 @@ export class StakingController {
         @Request() req: AuthenticatedRequest,
         @Query() query: GetStakePositionsDto,
     ) {
-        const wallet = await this.stakingService.getUserPrimaryWallet(
-            req.user.id,
-        );
+        // Try to get wallet address from query first (for authenticated users viewing a specific wallet)
+        // Or default to user's primary wallet
+        let walletAddress = query.walletAddress;
 
-        if (!wallet) {
+        if (!walletAddress) {
+            const wallet = await this.stakingService.getUserPrimaryWallet(
+                req.user.id,
+            );
+            if (wallet) {
+                walletAddress = wallet.walletAddress;
+            }
+        }
+
+        if (!walletAddress) {
             return {
                 positions: [],
                 total: 0,
@@ -123,7 +132,7 @@ export class StakingController {
         }
 
         return this.stakingService.getStakePositions(
-            wallet.walletAddress,
+            walletAddress,
             query,
         );
     }
@@ -133,12 +142,19 @@ export class StakingController {
     @ApiBearerAuth("access-token")
     @ApiOperation({ summary: "Get staking summary for authenticated user" })
     @ApiResponse({ status: 200, description: "Summary retrieved successfully" })
-    async getMySummary(@Request() req: AuthenticatedRequest) {
-        const wallet = await this.stakingService.getUserPrimaryWallet(
-            req.user.id,
-        );
+    async getMySummary(@Request() req: AuthenticatedRequest, @Query("walletAddress") walletAddress?: string) {
+        let effectiveWalletAddress = walletAddress;
 
-        if (!wallet) {
+        if (!effectiveWalletAddress) {
+            const wallet = await this.stakingService.getUserPrimaryWallet(
+                req.user.id,
+            );
+            if (wallet) {
+                effectiveWalletAddress = wallet.walletAddress;
+            }
+        }
+
+        if (!effectiveWalletAddress) {
             return {
                 totalActiveStakes: 0,
                 totalPrincipalStaked: "0",
@@ -150,7 +166,7 @@ export class StakingController {
         }
 
         return this.stakingService.getStakePositionsSummary(
-            wallet.walletAddress,
+            effectiveWalletAddress,
         );
     }
 }

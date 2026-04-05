@@ -14,6 +14,7 @@ import {
 } from '@/lib/blockchain/contracts';
 import { DEFAULT_CHAIN_ID } from '@/lib/config/chains';
 import { getChainConfig } from '@/lib/config/chains';
+import { useUserInfo } from './use-user-info';
 
 export interface StakePackage {
     id: number;
@@ -94,8 +95,12 @@ async function simulateWriteContract(params: {
 }
 
 export function useYieldStaking() {
-    const { address } = useAccount();
+    const { address: wagmiAddress } = useAccount();
+    const { walletAddress } = useUserInfo();
     const chainId = useChainId() || DEFAULT_CHAIN_ID;
+
+    // Use walletAddress from profile if wagmi address is not available
+    const address = (wagmiAddress || walletAddress) as Address | undefined;
 
     const stakingConfig = useMemo(() => getYieldStakingContractConfig(chainId), [chainId]);
     const stakingAddress = useMemo(() => getYieldStakingAddress(chainId), [chainId]);
@@ -473,8 +478,12 @@ export function useStakeWriter() {
 }
 
 export function useUserStakes(packageId: number) {
-    const { address } = useAccount();
+    const { address: wagmiAddress } = useAccount();
+    const { walletAddress } = useUserInfo();
     const chainId = useChainId() || DEFAULT_CHAIN_ID;
+    
+    const address = (wagmiAddress || walletAddress) as Address | undefined;
+    
     const stakingConfig = useMemo(() => getYieldStakingContractConfig(chainId), [chainId]);
 
     const { data: stakeCount, refetch: refetchCount } = useReadContract({

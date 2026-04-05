@@ -36,7 +36,7 @@ export function useStakingPackages(contractId?: number) {
     });
 }
 
-export function useMyPositions(params?: { page?: number; limit?: number }) {
+export function useMyPositions(params?: { page?: number; limit?: number; walletAddress?: string }) {
     return useQuery({
         queryKey: ['staking', 'positions', 'my', params],
         queryFn: () => fetchMyPositions(params),
@@ -45,10 +45,10 @@ export function useMyPositions(params?: { page?: number; limit?: number }) {
     });
 }
 
-export function useMySummary() {
+export function useMySummary(walletAddress?: string) {
     return useQuery({
-        queryKey: ['staking', 'summary', 'my'],
-        queryFn: fetchMySummary,
+        queryKey: ['staking', 'summary', 'my', walletAddress],
+        queryFn: () => fetchMySummary(walletAddress),
         staleTime: 30 * 1000,
         enabled: hasAccountAuth(),
     });

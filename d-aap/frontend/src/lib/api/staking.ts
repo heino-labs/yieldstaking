@@ -130,6 +130,7 @@ export async function fetchStakingPackages(contractId?: number): Promise<Staking
 export async function fetchMyPositions(params?: {
     page?: number;
     limit?: number;
+    walletAddress?: string;
 }): Promise<StakePositionsResponse> {
     try {
         return await api.get<StakePositionsResponse>('/v1/staking/positions', { params });
@@ -142,9 +143,10 @@ export async function fetchMyPositions(params?: {
     }
 }
 
-export async function fetchMySummary(): Promise<StakingSummary> {
+export async function fetchMySummary(walletAddress?: string): Promise<StakingSummary> {
     try {
-        return await api.get<StakingSummary>('/v1/staking/summary');
+        const params = walletAddress ? { walletAddress } : undefined;
+        return await api.get<StakingSummary>('/v1/staking/summary', { params });
     } catch (error: unknown) {
         throw handleApiError({
             error,

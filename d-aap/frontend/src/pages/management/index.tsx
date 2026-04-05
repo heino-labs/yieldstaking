@@ -17,7 +17,10 @@ import { usePlatformStatistics } from '@/hooks/use-admin';
 
 function formatAmount(amount: string, decimals: number = 6): string {
     const value = Number(BigInt(amount)) / Math.pow(10, decimals);
-    return new Intl.NumberFormat('en-US', { maximumFractionDigits: decimals > 6 ? 2 : 4 }).format(value);
+    return new Intl.NumberFormat('en-US', { 
+        maximumFractionDigits: decimals >= 18 ? 2 : 6,
+        minimumFractionDigits: 0
+    }).format(value);
 }
 
 function formatCompact(num: number): string {

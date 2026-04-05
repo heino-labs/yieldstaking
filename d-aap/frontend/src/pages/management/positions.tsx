@@ -42,7 +42,10 @@ import type { StakePositionAdmin } from '@/interfaces/admin';
 
 function formatAmount(amount: string, decimals: number = 6): string {
     const value = Number(BigInt(amount)) / Math.pow(10, decimals);
-    return new Intl.NumberFormat('en-US', { maximumFractionDigits: 2 }).format(value);
+    return new Intl.NumberFormat('en-US', { 
+        maximumFractionDigits: decimals >= 18 ? 4 : 6,
+        minimumFractionDigits: 0
+    }).format(value);
 }
 
 function PositionDetails({ positionId, open, onOpenChange }: { positionId: number | null, open: boolean, onOpenChange: (open: boolean) => void }) {
@@ -231,16 +234,19 @@ export default function AdminPositionsPage() {
         {
             accessorKey: 'rewardTotal',
             header: 'Rewards',
-            cell: ({ row }) => (
-                <div className="font-mono">
-                    <div className="text-green-600 dark:text-green-400">
-                        +{formatAmount(row.original.rewardTotal, 18)} {row.original.contract.rewardTokenSymbol}
+            cell: ({ row }) => {
+                const rewardDecimals = row.original.contract.rewardTokenSymbol === 'USDT' ? 6 : 18;
+                return (
+                    <div className="font-mono">
+                        <div className="text-green-600 dark:text-green-400">
+                            +{formatAmount(row.original.rewardTotal, rewardDecimals)} {row.original.contract.rewardTokenSymbol}
+                        </div>
+                        <div className="text-xs text-muted-foreground">
+                            Claimed: {formatAmount(row.original.rewardClaimed, rewardDecimals)}
+                        </div>
                     </div>
-                    <div className="text-xs text-muted-foreground">
-                        Claimed: {formatAmount(row.original.rewardClaimed, 18)}
-                    </div>
-                </div>
-            ),
+                );
+            },
         },
         {
             accessorKey: 'lockPeriod',

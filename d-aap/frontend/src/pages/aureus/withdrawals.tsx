@@ -1,11 +1,21 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import { useAccount, useChainId } from 'wagmi';
-import { ArrowDownToLine, Clock, Gift, Loader2, Unlock } from 'lucide-react';
+import {
+    ArrowDownToLine,
+    Clock,
+    Gift,
+    Loader2,
+    Unlock,
+    Lock,
+    TrendingUp,
+    Wallet,
+    ChevronRight,
+    AlertCircle,
+} from 'lucide-react';
 import { toast } from 'sonner';
 
 import { Button } from '@/components/ui/button';
-import { Card, CardContent } from '@/components/ui/card';
 import { StakedPackagesTable, type StakedPackageItem } from '@/components/tables';
 import { WalletDisplay } from '@/components/wallet';
 import { useStakingPositionsView } from '@/hooks';
@@ -14,6 +24,43 @@ import { formatTokenAmount, formatTokenAmountWithFloor } from '@/lib/utils/forma
 import { hasAccountAuth } from '@/lib/auth/auth';
 import { DEFAULT_CHAIN_ID } from '@/lib/config/chains';
 import { EXPLORER_ENDPOINTS } from '@/lib/constants/rpc';
+import { cn } from '@/lib/utils';
+
+/* ── Small stat tile ── */
+function InfoRow({
+    label,
+    value,
+    valueClass,
+}: {
+    label: string;
+    value: string;
+    valueClass?: string;
+}) {
+    return (
+        <div className="flex items-center justify-between py-2.5 border-b border-border/50 last:border-0">
+            <span className="text-sm text-muted-foreground">{label}</span>
+            <span className={cn('text-sm font-semibold tabular-nums', valueClass)}>{value}</span>
+        </div>
+    );
+}
+
+/* ── Status pill ── */
+function StatusPill({ unlocked, timeRemaining }: { unlocked: boolean; timeRemaining: string }) {
+    if (unlocked) {
+        return (
+            <span className="inline-flex items-center gap-1.5 rounded-full border border-emerald-500/30 bg-emerald-500/10 px-3 py-1 text-xs font-semibold text-emerald-400">
+                <Unlock className="h-3.5 w-3.5" />
+                Unlocked
+            </span>
+        );
+    }
+    return (
+        <span className="inline-flex items-center gap-1.5 rounded-full border border-amber-500/30 bg-amber-500/10 px-3 py-1 text-xs font-semibold text-amber-400">
+            <Lock className="h-3.5 w-3.5" />
+            {timeRemaining}
+        </span>
+    );
+}
 
 export default function WithdrawalsPage() {
     const { isConnected } = useAccount();
@@ -25,10 +72,7 @@ export default function WithdrawalsPage() {
     const queryClient = useQueryClient();
 
     const { claim, withdraw, isWritePending, isConfirming, isConfirmed, reset } = useStakeWriter();
-    const { activePositions, metadata } = useStakingPositionsView({
-        page: 1,
-        limit: 200,
-    });
+    const { activePositions, metadata } = useStakingPositionsView({ page: 1, limit: 200 });
 
     const tableData: StakedPackageItem[] = useMemo(
         () =>
@@ -49,11 +93,8 @@ export default function WithdrawalsPage() {
     );
 
     const selected = useMemo(() => {
-        if (!selectedStake) {
-            return activePositions[0] || null;
-        }
-
-        return activePositions.find((position) => position.id === selectedStake) || null;
+        if (!selectedStake) return activePositions[0] || null;
+        return activePositions.find((p) => p.id === selectedStake) || null;
     }, [activePositions, selectedStake]);
 
     useEffect(() => {
@@ -68,10 +109,8 @@ export default function WithdrawalsPage() {
 
     const handleClaim = async () => {
         if (!selected) return;
-
         setProcessingId(`${selected.id}-claim`);
         setActionType('claim');
-
         try {
             await claim(selected.packageId, selected.stakeId);
         } catch (error) {
@@ -84,10 +123,8 @@ export default function WithdrawalsPage() {
 
     const handleWithdraw = async () => {
         if (!selected) return;
-
         setProcessingId(`${selected.id}-withdraw`);
         setActionType('withdraw');
-
         try {
             await withdraw(selected.packageId, selected.stakeId);
         } catch (error) {
@@ -102,17 +139,12 @@ export default function WithdrawalsPage() {
     const explorerUrl = EXPLORER_ENDPOINTS[chainId] || EXPLORER_ENDPOINTS[DEFAULT_CHAIN_ID];
     const stakeSymbol = selected?.stakeSymbol ?? metadata.stakeSymbol;
     const rewardSymbol = selected?.rewardSymbol ?? metadata.rewardSymbol;
+
     const claimableDisplay = selected
-        ? formatTokenAmountWithFloor(
-              selected.claimableRewardRaw,
-              selected.rewardTokenDecimals,
-              4,
-          )
+        ? formatTokenAmountWithFloor(selected.claimableRewardRaw, selected.rewardTokenDecimals, 4)
         : '0';
     const showsTinyClaimable =
-        selected !== null &&
-        selected.claimableRewardRaw > 0n &&
-        claimableDisplay.startsWith('< ');
+        selected !== null && selected.claimableRewardRaw > 0n && claimableDisplay.startsWith('< ');
     const claimableLabel = claimableDisplay.startsWith('< ')
         ? claimableDisplay
         : `+${claimableDisplay}`;
@@ -120,10 +152,13 @@ export default function WithdrawalsPage() {
     if (!isAuthenticated) {
         return (
             <div className="flex flex-1 items-center justify-center p-4">
-                <div className="w-full max-w-lg rounded-2xl bg-card border p-8 text-center space-y-6">
-                    <h1 className="text-2xl font-bold">Sign in required</h1>
-                    <p className="text-muted-foreground">
-                        Please sign in to view and manage your stake positions.
+                <div className="w-full max-w-md rounded-2xl border bg-card p-10 text-center space-y-4">
+                    <div className="mx-auto w-fit rounded-full bg-muted p-4">
+                        <Wallet className="h-8 w-8 text-muted-foreground" />
+                    </div>
+                    <h1 className="text-xl font-bold">Sign in required</h1>
+                    <p className="text-sm text-muted-foreground">
+                        Please connect your wallet to view and manage your stake positions.
                     </p>
                 </div>
             </div>
@@ -131,29 +166,41 @@ export default function WithdrawalsPage() {
     }
 
     return (
-        <div className="flex flex-1 flex-col px-4 py-6 lg:px-6">
-            <div className="mb-6">
-                <h1 className="text-2xl font-bold">Withdraw & Claim</h1>
-                <p className="text-muted-foreground">Manage your staked positions and claim rewards</p>
+        <div className="flex flex-1 flex-col px-4 py-6 lg:px-8 gap-6">
+            {/* ── Header ── */}
+            <div>
+                <h1 className="text-2xl font-bold tracking-tight">Withdraw &amp; Claim</h1>
+                <p className="text-sm text-muted-foreground mt-0.5">
+                    Manage your staked positions and collect rewards
+                </p>
             </div>
+
+            {/* ── Wallet banner ── */}
             {!isConnected && (
-                <div className="mb-6 rounded-2xl bg-card border p-6">
+                <div className="rounded-2xl border border-amber-500/20 bg-amber-500/5 p-5">
                     <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
-                        <div>
-                            <div className="text-lg font-semibold">Wallet not connected</div>
-                            <div className="text-sm text-muted-foreground">
-                                You can view your positions from backend history, but claiming and
-                                withdrawing require a connected wallet for transaction signing.
+                        <div className="flex items-start gap-3">
+                            <AlertCircle className="h-5 w-5 text-amber-400 mt-0.5 shrink-0" />
+                            <div>
+                                <p className="text-sm font-semibold text-amber-400">
+                                    Wallet not connected
+                                </p>
+                                <p className="text-xs text-muted-foreground mt-0.5">
+                                    You can view positions from history, but claiming and withdrawing
+                                    require a connected wallet.
+                                </p>
                             </div>
                         </div>
-                        <div className="max-w-xs">
+                        <div className="shrink-0">
                             <WalletDisplay />
                         </div>
                     </div>
                 </div>
             )}
 
+            {/* ── Main layout ── */}
             <div className="grid gap-6 xl:grid-cols-10">
+                {/* Left — table */}
                 <div className="min-w-0 xl:col-span-6">
                     <StakedPackagesTable
                         data={tableData}
@@ -163,104 +210,106 @@ export default function WithdrawalsPage() {
                         contractAddress={metadata.contractAddress}
                         stakeSymbol={stakeSymbol}
                         rewardSymbol={rewardSymbol}
-                        stakeDecimals={selected?.stakeTokenDecimals ?? activePositions[0]?.stakeTokenDecimals ?? 18}
-                        rewardDecimals={selected?.rewardTokenDecimals ?? activePositions[0]?.rewardTokenDecimals ?? 6}
+                        stakeDecimals={
+                            selected?.stakeTokenDecimals ??
+                            activePositions[0]?.stakeTokenDecimals ??
+                            18
+                        }
+                        rewardDecimals={
+                            selected?.rewardTokenDecimals ??
+                            activePositions[0]?.rewardTokenDecimals ??
+                            6
+                        }
                     />
                 </div>
+
+                {/* Right — action panel */}
                 <div className="min-w-0 xl:col-span-4">
-                    <Card>
-                        <CardContent className="p-6 space-y-4">
-                            {selected ? (
-                                <>
-                                    <div className="rounded-xl p-4">
-                                        <div className="mb-4 flex items-center justify-between">
-                                            <div className="flex items-center gap-3">
-                                                <div className="flex h-10 w-10 items-center justify-center rounded-full bg-gradient-to-br from-amber-400 to-yellow-600 text-sm font-bold text-white">
-                                                    {selected.stakeSymbol.slice(0, 3).toUpperCase()}
-                                                </div>
-                                                <div>
-                                                    <div className="font-semibold">
-                                                        {selected.lockPeriodLabel} Package
-                                                    </div>
-                                                    <div className="text-sm text-muted-foreground">
-                                                        Stake #{selected.stakeId} • Principal in {selected.stakeSymbol}, rewards in {selected.rewardSymbol}
-                                                    </div>
-                                                </div>
+                    <div className="rounded-2xl border bg-card overflow-hidden">
+                        {selected ? (
+                            <>
+                                {/* Position header */}
+                                <div className="border-b bg-muted/20 px-5 py-4">
+                                    <div className="flex items-center justify-between gap-3">
+                                        <div className="flex items-center gap-3">
+                                            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-amber-400 to-yellow-600 text-sm font-bold text-black shadow-sm">
+                                                {selected.stakeSymbol.slice(0, 2).toUpperCase()}
                                             </div>
-                                            <div className="text-right">
-                                                {selected.unlocked ? (
-                                                    <span className="inline-flex items-center gap-1 text-sm font-medium text-green-500">
-                                                        <Unlock className="h-4 w-4" />
-                                                        Unlocked
+                                            <div>
+                                                <p className="font-semibold leading-tight">
+                                                    {selected.lockPeriodLabel} Package
+                                                </p>
+                                                <p className="text-xs text-muted-foreground">
+                                                    Stake #{selected.stakeId} ·{' '}
+                                                    <span className="text-emerald-400 font-medium">
+                                                        {(selected.apy / 100).toFixed(0)}% APY
                                                     </span>
-                                                ) : (
-                                                    <span className="text-sm text-muted-foreground">
-                                                        {selected.timeRemaining} remaining
-                                                    </span>
-                                                )}
+                                                </p>
                                             </div>
                                         </div>
+                                        <StatusPill
+                                            unlocked={selected.unlocked}
+                                            timeRemaining={selected.timeRemaining}
+                                        />
+                                    </div>
+                                </div>
 
-                                        <div className="space-y-3">
-                                            <div className="flex justify-between text-sm">
-                                                <span className="text-muted-foreground">Staked At</span>
-                                                <span className="font-semibold">
-                                                    {selected.startDateLabel}
+                                {/* Position details */}
+                                <div className="px-5 py-4 space-y-0.5">
+                                    <InfoRow
+                                        label="Staked At"
+                                        value={selected.startDateLabel}
+                                    />
+                                    <InfoRow
+                                        label="Unlock Date"
+                                        value={selected.unlockDateLabel}
+                                    />
+                                    <InfoRow
+                                        label="Principal"
+                                        value={`${formatTokenAmount(selected.principalRaw, selected.stakeTokenDecimals, 2)} ${selected.stakeSymbol}`}
+                                    />
+                                    <InfoRow
+                                        label="Total Rewards"
+                                        value={`${formatTokenAmount(selected.rewardTotalRaw, selected.rewardTokenDecimals, 6)} ${selected.rewardSymbol}`}
+                                    />
+                                    <InfoRow
+                                        label="Already Claimed"
+                                        value={`${formatTokenAmount(selected.rewardClaimedRaw, selected.rewardTokenDecimals, 6)} ${selected.rewardSymbol}`}
+                                    />
+                                    <InfoRow
+                                        label="Claimable Now"
+                                        value={`${claimableLabel} ${selected.rewardSymbol}`}
+                                        valueClass={
+                                            selected.claimableRewardRaw > 0n
+                                                ? 'text-emerald-400'
+                                                : undefined
+                                        }
+                                    />
+                                </div>
+
+                                {/* Claimable highlight */}
+                                {selected.claimableRewardRaw > 0n && (
+                                    <div className="mx-5 mb-4 rounded-xl border border-emerald-500/20 bg-emerald-500/5 px-4 py-3">
+                                        <div className="flex items-center justify-between">
+                                            <div className="flex items-center gap-2">
+                                                <TrendingUp className="h-4 w-4 text-emerald-400" />
+                                                <span className="text-sm font-medium text-emerald-400">
+                                                    Ready to claim
                                                 </span>
                                             </div>
-                                            <div className="flex justify-between text-sm">
-                                                <span className="text-muted-foreground">Staked Amount</span>
-                                                <span className="font-semibold">
-                                                    {formatTokenAmount(
-                                                        selected.principalRaw,
-                                                        selected.stakeTokenDecimals,
-                                                        2,
-                                                    )}{' '}
-                                                    {selected.stakeSymbol}
-                                                </span>
-                                            </div>
-                                            <div className="flex justify-between text-sm">
-                                                <span className="text-muted-foreground">Total Rewards</span>
-                                                <span className="font-semibold">
-                                                    {formatTokenAmount(
-                                                        selected.rewardTotalRaw,
-                                                        selected.rewardTokenDecimals,
-                                                        4,
-                                                    )}{' '}
-                                                    {selected.rewardSymbol}
-                                                </span>
-                                            </div>
-                                            <div className="flex justify-between text-sm">
-                                                <span className="text-muted-foreground">Claimed</span>
-                                                <span className="font-semibold">
-                                                    {formatTokenAmount(
-                                                        selected.rewardClaimedRaw,
-                                                        selected.rewardTokenDecimals,
-                                                        4,
-                                                    )}{' '}
-                                                    {selected.rewardSymbol}
-                                                </span>
-                                            </div>
-                                            <div className="flex justify-between text-sm">
-                                                <span className="text-muted-foreground">Claimable Now</span>
-                                                <span className="font-semibold text-green-500">
-                                                    {claimableLabel}{' '}
-                                                    {selected.rewardSymbol}
-                                                </span>
-                                            </div>
-                                            <div className="flex justify-between text-sm">
-                                                <span className="text-muted-foreground">Unlock Date</span>
-                                                <span className="font-semibold">
-                                                    {selected.unlockDateLabel}
-                                                </span>
-                                            </div>
+                                            <span className="text-sm font-bold text-emerald-400 tabular-nums">
+                                                {claimableLabel} {selected.rewardSymbol}
+                                            </span>
                                         </div>
                                     </div>
+                                )}
 
-                                    <div className="grid gap-3 sm:grid-cols-2">
+                                {/* Action buttons */}
+                                <div className="px-5 pb-5 space-y-3">
+                                    <div className="grid grid-cols-2 gap-3">
                                         <Button
                                             variant="outline"
-                                            className="h-12"
+                                            className="h-11 gap-2"
                                             onClick={() => void handleClaim()}
                                             disabled={
                                                 !isConnected ||
@@ -269,50 +318,66 @@ export default function WithdrawalsPage() {
                                             }
                                         >
                                             {processingId?.endsWith('-claim') && isProcessing ? (
-                                                <Loader2 className="mr-2 h-5 w-5 animate-spin" />
+                                                <Loader2 className="h-4 w-4 animate-spin" />
                                             ) : (
-                                                <Gift className="mr-2 h-5 w-5" />
+                                                <Gift className="h-4 w-4" />
                                             )}
-                                            Claim Rewards
+                                            <span className="font-semibold">Claim</span>
                                         </Button>
                                         <Button
-                                            className="h-12 bg-gradient-to-r from-amber-500 to-yellow-600 text-white hover:from-amber-600 hover:to-yellow-700"
+                                            className={cn(
+                                                'h-11 gap-2 font-semibold text-black',
+                                                selected.unlocked
+                                                    ? 'bg-gradient-to-r from-amber-400 to-yellow-500 hover:from-amber-500 hover:to-yellow-600'
+                                                    : 'bg-muted text-muted-foreground',
+                                            )}
                                             onClick={() => void handleWithdraw()}
                                             disabled={!isConnected || !selected.unlocked || isProcessing}
                                         >
                                             {processingId?.endsWith('-withdraw') && isProcessing ? (
-                                                <Loader2 className="mr-2 h-5 w-5 animate-spin" />
+                                                <Loader2 className="h-4 w-4 animate-spin" />
                                             ) : (
-                                                <ArrowDownToLine className="mr-2 h-5 w-5" />
+                                                <ArrowDownToLine className="h-4 w-4" />
                                             )}
-                                            Withdraw All
+                                            Withdraw
                                         </Button>
                                     </div>
 
+                                    {/* Helper messages */}
                                     {!selected.unlocked && (
-                                        <div className="text-center text-sm text-muted-foreground">
-                                            Withdrawal is available after the unlock date. Reward
-                                            claims remain available anytime.
-                                        </div>
+                                        <p className="text-center text-xs text-muted-foreground">
+                                            <Lock className="inline h-3 w-3 mr-1 mb-0.5" />
+                                            Principal is locked · Rewards can be claimed anytime
+                                        </p>
                                     )}
                                     {showsTinyClaimable && (
-                                        <div className="text-center text-sm text-muted-foreground">
-                                            Rewards are accruing already. Values smaller than 0.0001
-                                            display as &lt; 0.0001.
-                                        </div>
+                                        <p className="text-center text-xs text-muted-foreground">
+                                            Rewards accruing — values &lt; 0.0001 display as &lt; 0.0001
+                                        </p>
                                     )}
-                                </>
-                            ) : (
-                                <div className="py-12 text-center text-muted-foreground">
-                                    <Clock className="mx-auto mb-4 h-12 w-12 opacity-50" />
-                                    <p>No active stakes found</p>
-                                    <p className="mt-1 text-sm">
-                                        Start staking to see your positions here
-                                    </p>
                                 </div>
-                            )}
-                        </CardContent>
-                    </Card>
+                            </>
+                        ) : (
+                            <div className="flex flex-col items-center justify-center gap-3 py-16 text-center px-6">
+                                <div className="rounded-full bg-muted/40 p-4">
+                                    <Clock className="h-8 w-8 text-muted-foreground" />
+                                </div>
+                                <p className="font-medium">No active stakes</p>
+                                <p className="text-sm text-muted-foreground">
+                                    Start staking to see your positions here
+                                </p>
+                                <Button
+                                    variant="outline"
+                                    size="sm"
+                                    className="mt-2 gap-1"
+                                    onClick={() => window.location.href = '/app/stake'}
+                                >
+                                    Go to Stake
+                                    <ChevronRight className="h-4 w-4" />
+                                </Button>
+                            </div>
+                        )}
+                    </div>
                 </div>
             </div>
         </div>

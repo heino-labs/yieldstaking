@@ -2,6 +2,7 @@ import { useMemo } from 'react';
 
 import { useMyPositions } from '@/hooks/use-staking';
 import { formatTokenAmount } from '@/lib/utils/format';
+import { useUserInfo } from './use-user-info';
 
 const DEFAULT_STAKE_DECIMALS = 18;
 const DEFAULT_REWARD_DECIMALS = 6;
@@ -80,9 +81,15 @@ function formatTimeRemaining(unlockTimestampMs: number): string {
 }
 
 export function useStakingPositionsView(
-    params: { page?: number; limit?: number } = { page: 1, limit: 200 },
+    params: { page?: number; limit?: number; walletAddress?: string } = { page: 1, limit: 200 },
 ) {
-    const query = useMyPositions(params);
+    const { walletAddress: profileWalletAddress } = useUserInfo();
+    const effectiveWalletAddress = params.walletAddress || profileWalletAddress;
+
+    const query = useMyPositions({
+        ...params,
+        walletAddress: effectiveWalletAddress,
+    });
     const positions = useMemo<StakingPositionView[]>(() => {
         return (query.data?.positions ?? []).map((position) => {
             const stakeTokenDecimals = position.contract?.stakeTokenDecimals ?? DEFAULT_STAKE_DECIMALS;

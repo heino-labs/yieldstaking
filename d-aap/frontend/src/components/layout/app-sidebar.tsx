@@ -40,7 +40,7 @@ const userNavItems = [
                 url: '/app/stake-history',
             },
             {
-                title: 'Reward History',
+                title: 'Claim History',
                 url: '/app/reward-history',
             },
         ],

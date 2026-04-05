@@ -26,6 +26,10 @@ export class GetStakePositionsDto {
     @Type(() => Number)
     @IsInt()
     packageId?: number;
+
+    @ApiPropertyOptional({ description: "Filter by wallet address" })
+    @IsOptional()
+    walletAddress?: string;
 }
 
 export class StakePositionResponseDto {

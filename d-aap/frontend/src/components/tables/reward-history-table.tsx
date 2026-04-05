@@ -13,8 +13,7 @@ import {
 import { IconChevronLeft, IconChevronRight, IconChevronsLeft, IconChevronsRight } from '@tabler/icons-react';
 import { ExternalLink, Search, TrendingUp } from 'lucide-react';
 
-import { formatTokenAmount } from '@/lib/utils/format';
-import { Badge } from '@/components/ui/badge';
+import { formatTokenAmountWithFloor } from '@/lib/utils/format';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -95,7 +94,7 @@ export function RewardHistoryTable({
                 const amount = BigInt(row.original.amount || '0');
                 return (
                     <span className="text-green-600 dark:text-green-400 font-bold text-lg">
-                        +{formatTokenAmount(amount, row.original.rewardDecimals, 4)} {row.original.rewardSymbol}
+                        +{formatTokenAmountWithFloor(amount, row.original.rewardDecimals, 6)} {row.original.rewardSymbol}
                     </span>
                 );
             },

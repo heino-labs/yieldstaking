@@ -45,7 +45,10 @@ function formatAmount(amount: string, type: string): string {
     const decimals = type === 'STAKE' || type === 'WITHDRAW' ? 18 : 6;
     const symbol = type === 'STAKE' || type === 'WITHDRAW' ? 'AUR' : 'USDT';
     const value = Number(BigInt(amount)) / Math.pow(10, decimals);
-    return `${new Intl.NumberFormat('en-US', { maximumFractionDigits: 4 }).format(value)} ${symbol}`;
+    return `${new Intl.NumberFormat('en-US', { 
+        maximumFractionDigits: decimals >= 18 ? 4 : 6,
+        minimumFractionDigits: 0
+    }).format(value)} ${symbol}`;
 }
 
 export default function AdminTransactionsPage() {

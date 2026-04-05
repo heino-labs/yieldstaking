@@ -1,362 +1,337 @@
-import { IconWallet } from '@tabler/icons-react';
-import { User, Mail, Phone, Upload, X, Camera } from 'lucide-react';
-import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
-import { isAddress } from 'viem';
-
-import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Label } from '@/components/ui/label';
 import {
-    Select,
-    SelectContent,
-    SelectItem,
-    SelectTrigger,
-    SelectValue,
-} from '@/components/ui/select';
-import { useUserProfile, useUpdateProfile } from '@/hooks/use-api-queries';
-import { useUserInfo } from '@/hooks/use-user-info';
+  User,
+  Camera,
+  X,
+  ExternalLink,
+} from "lucide-react";
+import { useState, useEffect, useMemo, useRef } from "react";
+import { isAddress } from "viem";
+import { useAccount, useSignMessage } from "wagmi";
+import { ConnectButton } from "@rainbow-me/rainbowkit";
 
-import { DatePickerField } from './date-picker-field';
-import { FormField } from './form-field';
-import { GENDER_OPTIONS } from './profile-constants';
+import { Button } from "@/components/ui/button";
+import {
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+  CardDescription,
+} from "@/components/ui/card";
+import { Label } from "@/components/ui/label";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 
-interface AccountSettingsFormProps {
-    onCancel?: () => void;
-}
+import {
+  useUserProfile,
+  useUpdateProfile,
+  useLinkWallet,
+} from "@/hooks/use-api-queries";
+import { useUserInfo } from "@/hooks/use-user-info";
+import { toast } from "sonner";
 
-export function AccountSettingsForm({ onCancel }: AccountSettingsFormProps = {}) {
-    const userInfo = useUserInfo();
-    const { data: profileData, isLoading: isLoadingProfile } = useUserProfile();
-    const updateProfileMutation = useUpdateProfile();
+import { DatePickerField } from "./date-picker-field";
+import { FormField } from "./form-field";
+import { GENDER_OPTIONS } from "./profile-constants";
 
-    const displayEmail = useMemo(() => {
-        if (profileData?.user?.email) {
-            return profileData.user.email;
-        }
-        if (!userInfo.email) return '';
-        if (isAddress(userInfo.email)) return '';
-        if (userInfo.email.includes('@')) {
-            return userInfo.email;
-        }
-        return '';
-    }, [userInfo.email, profileData?.user?.email]);
+export function AccountSettingsForm({ onCancel }: { onCancel?: () => void }) {
+  const userInfo = useUserInfo();
+  const { data: profileData, isLoading } = useUserProfile();
 
-    const hasExistingEmail = useMemo(() => {
-        return !!(profileData?.user?.email || (userInfo.email && userInfo.email.includes('@') && !isAddress(userInfo.email)));
-    }, [userInfo.email, profileData?.user?.email]);
+  const updateProfileMutation = useUpdateProfile();
+  const linkWalletMutation = useLinkWallet();
 
-    const getInitialProfile = useCallback(() => {
-        const nameParts = (profileData?.user?.name || userInfo.name || '').split(' ');
-        return {
-            firstName: nameParts[0] || '',
-            lastName: nameParts.slice(1).join(' ') || '',
-            email: profileData?.user?.email || displayEmail || '',
-            phone: '',
-            dateOfBirth: '',
-            gender: 'male',
-            bio: profileData?.user?.bio || '',
-            avatar: profileData?.user?.avatar || userInfo.avatar || '',
-        };
-    }, [userInfo.name, displayEmail, profileData, userInfo.avatar]);
+  const { address, isConnected } = useAccount();
+  const { signMessageAsync } = useSignMessage();
 
-    const [profile, setProfile] = useState(() => {
-        const nameParts = (userInfo.name || '').split(' ');
-        return {
-            firstName: nameParts[0] || '',
-            lastName: nameParts.slice(1).join(' ') || '',
-            email: displayEmail || '',
-        phone: '',
-        dateOfBirth: '',
-        gender: 'male',
-        bio: '',
-            avatar: userInfo.avatar || '',
-        };
-    });
+  const fileRef = useRef<HTMLInputElement>(null);
 
-    const [avatarPreview, setAvatarPreview] = useState<string | null>(
-        profileData?.user?.avatar || userInfo.avatar || null,
-    );
-    const avatarInputRef = useRef<HTMLInputElement>(null);
+  // ===== DATA =====
+  const displayEmail = useMemo(() => {
+    if (profileData?.user?.email) return profileData.user.email;
+    if (!userInfo.email) return "";
+    if (isAddress(userInfo.email)) return "";
+    return userInfo.email.includes("@") ? userInfo.email : "";
+  }, [userInfo.email, profileData]);
 
-    const initialProfileRef = useRef(profile);
+  const initialProfile = useMemo(() => {
+    const name = (profileData?.user?.name || userInfo.name || "").split(" ");
+    return {
+      firstName: name[0] || "",
+      lastName: name.slice(1).join(" "),
+      phone: "",
+      gender: "male",
+      dateOfBirth: "",
+      bio: profileData?.user?.bio || "",
+      avatar: profileData?.user?.avatar || userInfo.avatar || "",
+    };
+  }, [profileData, userInfo]);
 
-    useEffect(() => {
-        const initial = getInitialProfile();
-        setProfile(initial);
-        setAvatarPreview(initial.avatar || null);
-        initialProfileRef.current = initial;
-    }, [getInitialProfile]);
+  const [profile, setProfile] = useState(initialProfile);
+  const [avatar, setAvatar] = useState<string | null>(
+    initialProfile.avatar || null
+  );
 
-    const updateProfile = useCallback((field: keyof typeof profile, value: string | boolean) => {
-        setProfile((prev) => ({ ...prev, [field]: value }));
-    }, []);
+  useEffect(() => {
+    setProfile(initialProfile);
+    setAvatar(initialProfile.avatar || null);
+  }, [initialProfile]);
 
-    const handleAvatarChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
-        const file = e.target.files?.[0];
-        if (!file) return;
+  const updateField = (k: string, v: any) =>
+    setProfile((p) => ({ ...p, [k]: v }));
 
-        if (!file.type.startsWith('image/')) {
-            alert('Please select an image file');
-            return;
-        }
+  // ===== AVATAR =====
+  const onAvatarChange = (e: any) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
 
-        if (file.size > 5 * 1024 * 1024) {
-            alert('Image size must be less than 5MB');
-            return;
-        }
+    if (!file.type.startsWith("image/"))
+      return toast.error("File must be image");
 
-        const reader = new FileReader();
-        reader.onloadend = () => {
-            setAvatarPreview(reader.result as string);
-        };
-        reader.readAsDataURL(file);
-    }, []);
+    if (file.size > 5 * 1024 * 1024)
+      return toast.error("Max 5MB");
 
-    const handleRemoveAvatar = useCallback(() => {
-        setAvatarPreview(null);
-        if (avatarInputRef.current) {
-            avatarInputRef.current.value = '';
-        }
-    }, []);
+    const reader = new FileReader();
+    reader.onload = () => setAvatar(reader.result as string);
+    reader.readAsDataURL(file);
+  };
 
-    const handleSave = useCallback(async () => {
-        try {
-            const fullName =
-                `${profile.firstName} ${profile.lastName}`.trim() ||
-                profile.firstName ||
-                profile.lastName;
-            await updateProfileMutation.mutateAsync({
-                name: fullName || undefined,
-                bio: profile.bio || undefined,
-                avatar: avatarPreview || undefined,
-            });
-        } catch {
-        }
-    }, [profile, avatarPreview, updateProfileMutation]);
+  const removeAvatar = () => {
+    setAvatar(null);
+    if (fileRef.current) fileRef.current.value = "";
+  };
 
-    const handleCancel = useCallback(() => {
-        if (onCancel) {
-            onCancel();
-        } else {
-            setProfile(initialProfileRef.current);
-        }
-    }, [onCancel]);
+  // ===== SAVE =====
+  const handleSave = async () => {
+    try {
+      const name = `${profile.firstName} ${profile.lastName}`.trim();
 
-    return (
-        <div className="space-y-3 pb-3 overflow-x-hidden h-full flex flex-col">
-            <Card className="flex-1 min-h-0 flex flex-col">
-                <CardHeader className="pb-2 flex-shrink-0">
-                    <div className="flex items-center gap-2">
-                        <User className="h-5 w-5 text-muted-foreground" />
-                        <CardTitle className="text-lg font-semibold">Personal Information</CardTitle>
-                    </div>
-                </CardHeader>
-                <CardContent className="overflow-x-hidden pt-2 flex-1 min-h-0 overflow-y-auto">
-                    <div className="grid gap-3 lg:grid-cols-2 min-w-0">
-                        <div className="space-y-3 min-w-0">
-                            <div className="grid gap-3 sm:grid-cols-2 min-w-0">
-                        <FormField
-                            id="firstName"
-                            label="First Name"
-                            value={profile.firstName}
-                            onChange={(value) => updateProfile('firstName', value)}
-                            placeholder="Enter your first name"
-                        />
-                        <FormField
-                            id="lastName"
-                            label="Last Name"
-                            value={profile.lastName}
-                            onChange={(value) => updateProfile('lastName', value)}
-                            placeholder="Enter your last name"
-                        />
-                    </div>
-                            <div className="space-y-2 min-w-0">
-                                <Label htmlFor="email" className="text-sm font-medium flex items-center gap-1.5">
-                                    <Mail className="h-4 w-4 text-muted-foreground" />
-                                    Email Address
-                                    {userInfo.authMethod === 'wallet' && !hasExistingEmail && (
-                                        <span className="text-xs text-muted-foreground font-normal">(Optional)</span>
-                                    )}
-                                    {hasExistingEmail && (
-                                        <span className="text-xs text-muted-foreground font-normal">(Read-only)</span>
-                                    )}
-                                </Label>
-                            <FormField
-                                id="email"
-                                label=""
-                                value={profile.email}
-                                onChange={(value) => updateProfile('email', value)}
-                                placeholder={
-                                    userInfo.authMethod === 'wallet'
-                                        ? 'Enter your email address (optional)'
-                                        : 'Enter your email address'
-                                }
-                                type="email"
-                                disabled={hasExistingEmail}
-                            />
-                        </div>
-                            <div className="space-y-2 min-w-0">
-                                <Label htmlFor="phone" className="text-sm font-medium flex items-center gap-1.5">
-                                <Phone className="h-4 w-4 text-muted-foreground" />
-                                Phone Number
-                            </Label>
-                            <FormField
-                                id="phone"
-                                label=""
-                                value={profile.phone}
-                                onChange={(value) => updateProfile('phone', value)}
-                                placeholder="Enter your phone number"
-                                type="tel"
-                            />
-                        </div>
-                            <div className="grid gap-3 sm:grid-cols-2 min-w-0">
-                        <DatePickerField
-                            id="dateOfBirth"
-                            label="Date of Birth"
-                            value={profile.dateOfBirth}
-                            onChange={(value) => updateProfile('dateOfBirth', value)}
-                        />
-                        <FormField
-                            id="gender"
-                            label="Gender"
-                            value={profile.gender}
-                            onChange={(value) => updateProfile('gender', value)}
-                        >
-                            <Select
-                                value={profile.gender}
-                                onValueChange={(value) => updateProfile('gender', value)}
-                            >
-                                <SelectTrigger className="h-10">
-                                    <SelectValue />
-                                </SelectTrigger>
-                                <SelectContent>
-                                    {GENDER_OPTIONS.map(
-                                        (option: (typeof GENDER_OPTIONS)[number]) => (
-                                            <SelectItem key={option.value} value={option.value}>
-                                                {option.label}
-                                            </SelectItem>
-                                        ),
-                                    )}
-                                </SelectContent>
-                            </Select>
-                        </FormField>
-                            </div>
-                        </div>
+      await updateProfileMutation.mutateAsync({
+        name: name || undefined,
+        bio: profile.bio || undefined,
+        avatar: avatar || undefined,
+      });
 
-                        <div className="space-y-3 min-w-0">
-                        <div className="space-y-2">
-                                <Label className="text-sm font-medium">Avatar</Label>
-                                <div className="relative w-full aspect-square max-w-[140px] mx-auto lg:mx-0">
-                                    {avatarPreview ? (
-                                        <div className="relative w-full h-full rounded-lg overflow-hidden border-2 border-border group">
-                                            <img
-                                                src={avatarPreview}
-                                                alt="Avatar preview"
-                                                className="w-full h-full object-cover"
-                                            />
-                                            <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-colors" />
-                                            <button
-                                                type="button"
-                                                onClick={handleRemoveAvatar}
-                                                className="absolute top-2 right-2 rounded-full bg-destructive p-1.5 text-destructive-foreground opacity-0 group-hover:opacity-100 transition-opacity shadow-lg"
-                                            >
-                                                <X className="h-4 w-4" />
-                                            </button>
-                                            <button
-                                                type="button"
-                                                onClick={() => avatarInputRef.current?.click()}
-                                                className="absolute bottom-2 left-1/2 -translate-x-1/2 rounded-full bg-primary p-2 text-primary-foreground opacity-0 group-hover:opacity-100 transition-opacity shadow-lg"
-                                            >
-                                                <Camera className="h-4 w-4" />
-                                            </button>
-                                        </div>
-                                    ) : (
-                                        <div
-                                            onClick={() => avatarInputRef.current?.click()}
-                                            className="w-full h-full rounded-lg border-2 border-dashed border-muted-foreground/25 flex flex-col items-center justify-center gap-2 cursor-pointer hover:border-primary/50 transition-colors bg-muted/30"
-                                        >
-                                            <div className="p-3 rounded-full bg-primary/10">
-                                                <Upload className="h-6 w-6 text-primary" />
-                                            </div>
-                                            <p className="text-sm font-medium">Upload Avatar</p>
-                                            <p className="text-xs text-muted-foreground text-center px-4">
-                                                JPG, PNG, GIF • Max 5MB
-                                            </p>
-                                        </div>
-                                    )}
-                                    <input
-                                        ref={avatarInputRef}
-                                        type="file"
-                                        accept="image/*"
-                                        onChange={handleAvatarChange}
-                                        className="hidden"
-                                    />
-                        </div>
-                    </div>
-                    <div className="space-y-2">
-                        <Label htmlFor="bio" className="text-sm font-medium">
-                            Bio
-                        </Label>
-                        <textarea
-                            id="bio"
-                            value={profile.bio}
-                            onChange={(e) => updateProfile('bio', e.target.value)}
-                            placeholder="Tell us about yourself..."
-                                    rows={3}
-                            className="flex min-h-[100px] w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 resize-none"
-                        />
-                            </div>
-                        </div>
-                    </div>
-                </CardContent>
-            </Card>
+      toast.success("Saved!");
+    } catch {
+      toast.error("Save failed");
+    }
+  };
 
-            <Card className="flex-shrink-0">
-                <CardContent className="overflow-x-hidden pt-3">
-                    {userInfo.isConnected && userInfo.walletAddress ? (
-                        <div className="flex items-start gap-2.5 p-3 bg-muted/30 rounded-lg border min-w-0">
-                            <div className="p-1.5 bg-primary/10 rounded-lg shrink-0">
-                                <IconWallet className="h-3.5 w-3.5 text-primary" />
-                            </div>
-                            <div className="flex-1 min-w-0">
-                                <p className="font-medium text-sm mb-0.5">Connected Wallet</p>
-                                <p className="text-xs text-muted-foreground font-mono break-all word-break break-words">
-                                    {userInfo.walletAddress}
-                                </p>
-                            </div>
-                        </div>
-                    ) : (
-                        <div className="flex items-start gap-2.5 p-3 bg-muted/30 rounded-lg border border-dashed">
-                            <div className="p-1.5 bg-muted rounded-lg shrink-0">
-                                <IconWallet className="h-3.5 w-3.5 text-muted-foreground" />
-                            </div>
-                            <div className="flex-1">
-                                <p className="font-medium text-sm mb-0.5">No Wallet Connected</p>
-                                <p className="text-xs text-muted-foreground">
-                                    Connect a wallet to link it to your account
-                                </p>
-                            </div>
-                        </div>
-                    )}
-                </CardContent>
-            </Card>
+  // ===== WALLET =====
+  const handleLink = async () => {
+    if (!isConnected || !address)
+      return toast.error("Connect wallet first");
 
+    try {
+      const message = `Link wallet ${address} at ${new Date().toISOString()}`;
+      const signature = await signMessageAsync({ message });
 
-            <div className="flex-shrink-0 bg-background border-t pt-3 pb-2 mt-3">
-                <div className="flex justify-end gap-2.5 w-full">
-                    <Button variant="outline" onClick={handleCancel} type="button" className="shrink-0 h-9">
-                    Cancel
-                </Button>
-                <Button
-                    onClick={() => void handleSave()}
-                    disabled={updateProfileMutation.isPending || isLoadingProfile}
-                        type="button"
-                        className="shrink-0 h-9"
-                >
-                    {updateProfileMutation.isPending ? 'Saving...' : 'Save Changes'}
-                </Button>
-                </div>
-            </div>
+      await linkWalletMutation.mutateAsync({
+        walletAddress: address,
+        signature,
+        message,
+      });
+
+      toast.success("Wallet linked!");
+    } catch (e: any) {
+      toast.error(e.message);
+    }
+  };
+
+  return (
+    <div className="flex flex-col h-full bg-background">
+
+      {/* HEADER */}
+      <div className="p-6 border-b flex items-center gap-4">
+        <div className="relative">
+          <div className="w-16 h-16 rounded-full bg-muted overflow-hidden flex items-center justify-center">
+            {avatar ? (
+              <img src={avatar} className="w-full h-full object-cover" />
+            ) : (
+              <User />
+            )}
+          </div>
+
+          <button
+            onClick={() => fileRef.current?.click()}
+            className="absolute bottom-0 right-0 p-1 bg-primary text-white rounded-full"
+          >
+            <Camera size={14} />
+          </button>
+
+          {avatar && (
+            <button
+              onClick={removeAvatar}
+              className="absolute -top-1 -right-1 bg-red-500 text-white rounded-full p-1"
+            >
+              <X size={12} />
+            </button>
+          )}
+
+          <input
+            ref={fileRef}
+            type="file"
+            className="hidden"
+            onChange={onAvatarChange}
+          />
         </div>
-    );
+
+        <div>
+          <h2 className="font-bold text-lg">
+            {profile.firstName} {profile.lastName || "User"}
+          </h2>
+          <p className="text-sm text-muted-foreground">
+            {displayEmail || "No email"}
+          </p>
+        </div>
+      </div>
+
+      {/* CONTENT */}
+      <div className="flex-1 overflow-y-auto p-6 grid grid-cols-1 lg:grid-cols-[2fr_1fr] gap-6">
+
+        {/* LEFT */}
+        <Card>
+          <CardHeader>
+            <CardTitle>Personal Information</CardTitle>
+          </CardHeader>
+
+          <CardContent className="space-y-6">
+            <div className="grid sm:grid-cols-2 gap-4">
+              <FormField
+                id="first"
+                label="First Name"
+                value={profile.firstName}
+                onChange={(v) => updateField("firstName", v)}
+              />
+              <FormField
+                id="last"
+                label="Last Name"
+                value={profile.lastName}
+                onChange={(v) => updateField("lastName", v)}
+              />
+            </div>
+
+            <div className="grid sm:grid-cols-2 gap-4">
+              <FormField
+                id="phone"
+                label="Phone"
+                value={profile.phone}
+                onChange={(v) => updateField("phone", v)}
+              />
+
+              <div>
+                <Label>Gender</Label>
+                <Select
+                  value={profile.gender}
+                  onValueChange={(v) => updateField("gender", v)}
+                >
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {GENDER_OPTIONS.map((g) => (
+                      <SelectItem key={g.value} value={g.value}>
+                        {g.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+
+            <DatePickerField
+              id="dob"
+              label="Date of Birth"
+              value={profile.dateOfBirth}
+              onChange={(v) => updateField("dateOfBirth", v)}
+            />
+          </CardContent>
+        </Card>
+
+        {/* RIGHT */}
+        <div className="space-y-6">
+
+          {/* WALLET */}
+          <Card>
+            <CardHeader>
+              <CardTitle>Wallet</CardTitle>
+              <CardDescription>
+                Connect & link your wallet
+              </CardDescription>
+            </CardHeader>
+
+            <CardContent className="space-y-4">
+
+              <div className="p-3 border rounded-lg flex justify-between">
+                <div>
+                  <p className="text-sm font-medium">Linked</p>
+                  <code className="text-xs">
+                    {profileData?.user?.walletAddress || "None"}
+                  </code>
+                </div>
+
+                {profileData?.user?.walletAddress && (
+                  <a
+                    href={`https://sepolia.etherscan.io/address/${profileData.user.walletAddress}`}
+                    target="_blank"
+                  >
+                    <ExternalLink size={16} />
+                  </a>
+                )}
+              </div>
+
+              <div className="p-3 border rounded-lg flex justify-between">
+                <div>
+                  <p className="text-sm font-medium">Browser</p>
+                  <code className="text-xs">
+                    {isConnected ? address : "Disconnected"}
+                  </code>
+                </div>
+
+                {!isConnected ? (
+                  <ConnectButton />
+                ) : (
+                  <Button size="sm" onClick={handleLink}>
+                    Link
+                  </Button>
+                )}
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* META */}
+          <Card>
+            <CardContent className="text-xs text-muted-foreground">
+              Member since{" "}
+              {profileData?.user?.createdAt
+                ? new Date(
+                    profileData.user.createdAt
+                  ).toLocaleDateString()
+                : "N/A"}
+            </CardContent>
+          </Card>
+        </div>
+      </div>
+
+      {/* FOOTER */}
+      <div className="sticky bottom-0 border-t p-4 flex justify-end gap-3 bg-background/80 backdrop-blur">
+        <Button variant="ghost" onClick={onCancel}>
+          Cancel
+        </Button>
+        <Button
+          onClick={handleSave}
+          disabled={updateProfileMutation.isPending || isLoading}
+        >
+          {updateProfileMutation.isPending
+            ? "Saving..."
+            : "Save Changes"}
+        </Button>
+      </div>
+    </div>
+  );
 }

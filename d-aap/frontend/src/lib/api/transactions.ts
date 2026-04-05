@@ -7,6 +7,7 @@ export async function fetchTransactions(params?: {
     page?: number;
     limit?: number;
     type?: string;
+    walletAddress?: string;
 }): Promise<StakingTransactionListResponse> {
     try {
         return await api.get<StakingTransactionListResponse>('/v1/transactions', { params });
@@ -29,9 +30,10 @@ export async function fetchTransactionByHash(txHash: string): Promise<StakingTra
     }
 }
 
-export async function fetchTransactionSummary(): Promise<TransactionSummary> {
+export async function fetchTransactionSummary(walletAddress?: string): Promise<TransactionSummary> {
     try {
-        return await api.get<TransactionSummary>('/v1/transactions/summary');
+        const params = walletAddress ? { walletAddress } : undefined;
+        return await api.get<TransactionSummary>('/v1/transactions/summary', { params });
     } catch (error: unknown) {
         throw handleApiError({
             error,
@@ -43,6 +45,7 @@ export async function fetchTransactionSummary(): Promise<TransactionSummary> {
 export async function fetchRewardHistory(params?: {
     page?: number;
     limit?: number;
+    walletAddress?: string;
 }): Promise<RewardHistoryResponse> {
     try {
         return await api.get<RewardHistoryResponse>('/v1/transactions/rewards', { params });
@@ -54,9 +57,10 @@ export async function fetchRewardHistory(params?: {
     }
 }
 
-export async function fetchRewardSummary(): Promise<RewardSummary> {
+export async function fetchRewardSummary(walletAddress?: string): Promise<RewardSummary> {
     try {
-        return await api.get<RewardSummary>('/v1/transactions/rewards/summary');
+        const params = walletAddress ? { walletAddress } : undefined;
+        return await api.get<RewardSummary>('/v1/transactions/rewards/summary', { params });
     } catch (error: unknown) {
         throw handleApiError({
             error,

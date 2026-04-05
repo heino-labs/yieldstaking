@@ -85,21 +85,20 @@ export function StakedPackagesTable({
                 const amount = BigInt(row.original.stakedAmount || '0');
                 return (
                     <div className="font-medium">
-                        {formatTokenAmount(amount, stakeDecimals, 2)} {stakeSymbol}
+                        {formatTokenAmount(amount, stakeDecimals, 4)} {stakeSymbol}
                     </div>
                 );
             },
         },
         {
             accessorKey: 'claimable',
-            header: 'Claimable',
+            header: 'Claimable Now',
             cell: ({ row }) => {
                 const amount = BigInt(row.original.claimable || '0');
-                const displayAmount = formatTokenAmountWithFloor(amount, rewardDecimals, 4);
+                const displayAmount = formatTokenAmountWithFloor(amount, rewardDecimals, 6);
                 return (
                     <span className="font-medium text-green-600 dark:text-green-400">
-                        {displayAmount.startsWith('< ') ? displayAmount : `+${displayAmount}`}{' '}
-                        {rewardSymbol}
+                        {displayAmount.startsWith('<') ? displayAmount : `+${displayAmount}`} {rewardSymbol}
                     </span>
                 );
             },

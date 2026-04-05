@@ -13,8 +13,13 @@ import {
     getAuthProfile,
 } from '@/lib/api/auth';
 
-import { fetchTransactions } from '@/lib/api/transactions';
-import { fetchUserProfileWithStats, updateUserProfile, fetchUserStatistics } from '@/lib/api/users';
+import {
+    fetchTransactions,
+    fetchTransactionSummary,
+    fetchRewardHistory,
+    fetchRewardSummary,
+} from '@/lib/api/transactions';
+import { fetchUserProfileWithStats, updateUserProfile, fetchUserStatistics, linkWallet as linkWalletApi } from '@/lib/api/users';
 import { useAuthentication } from '@/hooks/use-authentication';
 
 import type {
@@ -22,6 +27,20 @@ import type {
     LoginRequest,
     RegisterRequest,
 } from '@/interfaces';
+
+export function useLinkWallet() {
+    const queryClient = useQueryClient();
+
+    return useMutation({
+        mutationFn: (data: { walletAddress: string; signature: string; message: string }) =>
+            linkWalletApi(data.walletAddress, data.signature, data.message),
+        onSuccess: () => {
+            void queryClient.invalidateQueries({ queryKey: ['auth', 'profile'] });
+            void queryClient.invalidateQueries({ queryKey: ['user', 'profile'] });
+            toast.success('Wallet linked successfully');
+        },
+    });
+}
 
 export function useAuthProfile() {
     const { isAuthenticated } = useAuthentication();
@@ -135,10 +154,34 @@ export function useUserStatistics() {
     });
 }
 
-export function useTransactions(params?: { page?: number; limit?: number }) {
+export function useTransactions(params?: { page?: number; limit?: number; walletAddress?: string }) {
     return useQuery({
         queryKey: ['transactions', params],
         queryFn: () => fetchTransactions(params),
+        staleTime: 2 * 60 * 1000,
+    });
+}
+
+export function useTransactionSummary(walletAddress?: string) {
+    return useQuery({
+        queryKey: ['transactions', 'summary', walletAddress],
+        queryFn: () => fetchTransactionSummary(walletAddress),
+        staleTime: 2 * 60 * 1000,
+    });
+}
+
+export function useRewardHistory(params?: { page?: number; limit?: number; walletAddress?: string }) {
+    return useQuery({
+        queryKey: ['rewards', 'history', params],
+        queryFn: () => fetchRewardHistory(params),
+        staleTime: 2 * 60 * 1000,
+    });
+}
+
+export function useRewardSummary(walletAddress?: string) {
+    return useQuery({
+        queryKey: ['rewards', 'summary', walletAddress],
+        queryFn: () => fetchRewardSummary(walletAddress),
         staleTime: 2 * 60 * 1000,
     });
 }

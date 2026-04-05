@@ -41,11 +41,18 @@ export class TransactionController {
         @Request() req: AuthenticatedRequest,
         @Query() query: GetTransactionsDto,
     ) {
-        const wallet = await this.transactionService.getUserPrimaryWallet(
-            req.user.id,
-        );
+        let walletAddress = query.walletAddress;
 
-        if (!wallet) {
+        if (!walletAddress) {
+            const wallet = await this.transactionService.getUserPrimaryWallet(
+                req.user.id,
+            );
+            if (wallet) {
+                walletAddress = wallet.walletAddress;
+            }
+        }
+
+        if (!walletAddress) {
             return {
                 transactions: [],
                 total: 0,
@@ -56,7 +63,7 @@ export class TransactionController {
         }
 
         return this.transactionService.getTransactions(
-            wallet.walletAddress,
+            walletAddress,
             query,
         );
     }
@@ -64,12 +71,20 @@ export class TransactionController {
     @Get("summary")
     @ApiOperation({ summary: "Get transaction summary for authenticated user" })
     @ApiResponse({ status: 200, description: "Summary retrieved successfully" })
-    async getMySummary(@Request() req: AuthenticatedRequest) {
-        const wallet = await this.transactionService.getUserPrimaryWallet(
-            req.user.id,
-        );
+    @ApiQuery({ name: "walletAddress", required: false, type: String })
+    async getMySummary(@Request() req: AuthenticatedRequest, @Query("walletAddress") walletAddress?: string) {
+        let effectiveWalletAddress = walletAddress;
 
-        if (!wallet) {
+        if (!effectiveWalletAddress) {
+            const wallet = await this.transactionService.getUserPrimaryWallet(
+                req.user.id,
+            );
+            if (wallet) {
+                effectiveWalletAddress = wallet.walletAddress;
+            }
+        }
+
+        if (!effectiveWalletAddress) {
             return {
                 totalStaked: "0",
                 totalClaimed: "0",
@@ -81,7 +96,7 @@ export class TransactionController {
         }
 
         return this.transactionService.getTransactionSummary(
-            wallet.walletAddress,
+            effectiveWalletAddress,
         );
     }
 
@@ -89,6 +104,7 @@ export class TransactionController {
     @ApiOperation({ summary: "Get reward history for authenticated user" })
     @ApiQuery({ name: "page", required: false, type: Number })
     @ApiQuery({ name: "limit", required: false, type: Number })
+    @ApiQuery({ name: "walletAddress", required: false, type: String })
     @ApiResponse({
         status: 200,
         description: "Reward history retrieved successfully",
@@ -97,12 +113,20 @@ export class TransactionController {
         @Request() req: AuthenticatedRequest,
         @Query("page") page?: number,
         @Query("limit") limit?: number,
+        @Query("walletAddress") walletAddress?: string,
     ) {
-        const wallet = await this.transactionService.getUserPrimaryWallet(
-            req.user.id,
-        );
+        let effectiveWalletAddress = walletAddress;
 
-        if (!wallet) {
+        if (!effectiveWalletAddress) {
+            const wallet = await this.transactionService.getUserPrimaryWallet(
+                req.user.id,
+            );
+            if (wallet) {
+                effectiveWalletAddress = wallet.walletAddress;
+            }
+        }
+
+        if (!effectiveWalletAddress) {
             return {
                 rewards: [],
                 total: 0,
@@ -113,7 +137,7 @@ export class TransactionController {
         }
 
         return this.transactionService.getRewardHistory(
-            wallet.walletAddress,
+            effectiveWalletAddress,
             page || 1,
             limit || 10,
         );
@@ -121,16 +145,24 @@ export class TransactionController {
 
     @Get("rewards/summary")
     @ApiOperation({ summary: "Get reward summary for authenticated user" })
+    @ApiQuery({ name: "walletAddress", required: false, type: String })
     @ApiResponse({
         status: 200,
         description: "Reward summary retrieved successfully",
     })
-    async getMyRewardSummary(@Request() req: AuthenticatedRequest) {
-        const wallet = await this.transactionService.getUserPrimaryWallet(
-            req.user.id,
-        );
+    async getMyRewardSummary(@Request() req: AuthenticatedRequest, @Query("walletAddress") walletAddress?: string) {
+        let effectiveWalletAddress = walletAddress;
 
-        if (!wallet) {
+        if (!effectiveWalletAddress) {
+            const wallet = await this.transactionService.getUserPrimaryWallet(
+                req.user.id,
+            );
+            if (wallet) {
+                effectiveWalletAddress = wallet.walletAddress;
+            }
+        }
+
+        if (!effectiveWalletAddress) {
             return {
                 totalRewardEarned: "0",
                 totalRewardClaimed: "0",
@@ -139,7 +171,7 @@ export class TransactionController {
         }
 
         const summary = await this.stakingService.getStakePositionsSummary(
-            wallet.walletAddress,
+            effectiveWalletAddress,
         );
 
         return {
