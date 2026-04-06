@@ -1,4 +1,19 @@
-import { GalleryVerticalEnd, Sparkles, Shield, Cpu } from 'lucide-react';
+import {
+    GalleryVerticalEnd,
+    Shield,
+    Cpu,
+    Home,
+    Coins,
+    History,
+    ArrowDownCircle,
+    Gift,
+    LayoutDashboard,
+    Users,
+    Briefcase,
+    Repeat,
+    Activity,
+    Settings2,
+} from 'lucide-react';
 import * as React from 'react';
 
 import { TeamSwitcher } from '@/components/common';
@@ -23,51 +38,59 @@ const teams = [
 
 const userNavItems = [
     {
-        title: 'Yield Staking',
-        url: '/app/yield-staking',
-        icon: Sparkles,
+        title: 'Home',
+        url: '/app/aureus',
+        icon: Home,
         items: [
             {
-                title: 'Stake',
+                title: 'Yield Staking',
                 url: '/app/stake',
-            },
-            {
-                title: 'Withdrawals',
-                url: '/app/withdrawals',
+                icon: Coins,
             },
             {
                 title: 'Stake History',
                 url: '/app/stake-history',
+                icon: History,
+            },
+            {
+                title: 'Withdrawals',
+                url: '/app/withdrawals',
+                icon: ArrowDownCircle,
             },
             {
                 title: 'Claim History',
                 url: '/app/reward-history',
-            },
-        ],
-    },
+                icon: Gift,
+            }
+        ]
+    }
 ];
 
 const adminNavItems = [
     {
         title: 'Platform Management',
         url: '/app/management',
-        icon: Shield,
+        icon: LayoutDashboard,
         items: [
             {
                 title: 'Dashboard',
                 url: '/app/management',
+                icon: LayoutDashboard,
             },
             {
                 title: 'Users',
                 url: '/app/management/users',
+                icon: Users,
             },
             {
                 title: 'Positions',
                 url: '/app/management/positions',
+                icon: Briefcase,
             },
             {
                 title: 'Transactions',
                 url: '/app/management/transactions',
+                icon: Repeat,
             },
         ],
     },
@@ -79,10 +102,12 @@ const adminNavItems = [
             {
                 title: 'Monitor',
                 url: '/app/network/monitor',
+                icon: Activity,
             },
             {
                 title: 'Setup',
                 url: '/app/network/setup',
+                icon: Settings2,
             },
         ],
     },

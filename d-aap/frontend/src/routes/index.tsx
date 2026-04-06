@@ -15,8 +15,8 @@ const AuthCallbackPage = lazy(() => import('@/pages/auth/callback'));
 const AuthErrorPage = lazy(() => import('@/pages/auth/error'));
 
 // User pages (Aureus)
+const AureusPage = lazy(() => import('@/pages/aureus/aureus'));
 const YieldStakingPage = lazy(() => import('@/pages/aureus/yield-staking'));
-const StakePage = lazy(() => import('@/pages/aureus/stake'));
 const WithdrawalsPage = lazy(() => import('@/pages/aureus/withdrawals'));
 const StakeHistoryPage = lazy(() => import('@/pages/aureus/stake-history'));
 const RewardHistoryPage = lazy(() => import('@/pages/aureus/reward-history'));
@@ -77,10 +77,10 @@ export const routes: RouteObject[] = [
                 ),
             },
             {
-                path: 'yield-staking',
+                path: 'aureus',
                 element: (
                     <ProtectedPage>
-                        <YieldStakingPage />
+                        <AureusPage />
                     </ProtectedPage>
                 ),
             },
@@ -88,7 +88,7 @@ export const routes: RouteObject[] = [
                 path: 'stake',
                 element: (
                     <ProtectedPage>
-                        <StakePage />
+                        <YieldStakingPage />
                     </ProtectedPage>
                 ),
             },

@@ -18,5 +18,5 @@ export function RoleBasedRedirect() {
         return <Navigate to="/app/management" replace />;
     }
 
-    return <Navigate to="/app/yield-staking" replace />;
+    return <Navigate to="/app/aureus" replace />;
 }

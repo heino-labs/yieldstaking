@@ -231,8 +231,7 @@ export class BlockchainEventListenerService
 
             try {
                 const autoProcessRaw =
-                    process.env.BLOCKCHAIN_AUTO_PROCESS_EVENTS ??
-                    (process.env.NODE_ENV === "production" ? "false" : "true");
+                    process.env.BLOCKCHAIN_AUTO_PROCESS_EVENTS ?? "true";
                 const autoProcess = autoProcessRaw.toLowerCase() !== "false";
 
                 const latestBlock =
@@ -264,17 +263,18 @@ export class BlockchainEventListenerService
                         }
                     }
 
-                    if (autoProcess) {
-                        // Dev convenience only. In prod, run the dedicated blockchain worker.
-                        await this.eventProcessor
-                            .processUnprocessedEvents(100)
-                            .catch((err) =>
-                                this.logger.error(
-                                    `Error processing unprocessed events for ${addr} on chain ${chainId}:`,
-                                    err,
-                                ),
-                            );
-                    }
+                }
+
+                if (autoProcess) {
+                    // Safe to run alongside the dedicated worker because DB claiming uses SKIP LOCKED.
+                    await this.eventProcessor
+                        .processUnprocessedEvents(100)
+                        .catch((err) =>
+                            this.logger.error(
+                                `Error processing unprocessed events for ${addr} on chain ${chainId}:`,
+                                err,
+                            ),
+                        );
                 }
             } catch (error) {
                 this.logger.error(

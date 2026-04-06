@@ -54,6 +54,9 @@ export class BlockchainEventProcessorService {
         process.env.BLOCKCHAIN_MAX_ATTEMPTS || "10",
         10,
     );
+    private activeProcessingRun:
+        | Promise<{ processed: number; failed: number; errors: string[] }>
+        | null = null;
 
     constructor(private prisma: PrismaService) {}
 
@@ -255,6 +258,21 @@ export class BlockchainEventProcessorService {
     }
 
     async processUnprocessedEvents(limit = 100) {
+        if (this.activeProcessingRun) {
+            return this.activeProcessingRun;
+        }
+
+        const run = this.processUnprocessedEventsInternal(limit).finally(() => {
+            if (this.activeProcessingRun === run) {
+                this.activeProcessingRun = null;
+            }
+        });
+
+        this.activeProcessingRun = run;
+        return run;
+    }
+
+    private async processUnprocessedEventsInternal(limit = 100) {
         const claimed = await this.claimEvents(limit);
         if (claimed.length === 0) {
             return { processed: 0, failed: 0, errors: [] as string[] };
@@ -361,6 +379,35 @@ export class BlockchainEventProcessorService {
     ) {
         const userAddress = normalizeAddress(data.user);
         const normalizedContract = normalizeAddress(contractAddress);
+        const contract = await this.prisma.stakingContract.findFirst({
+            where: {
+                chainId,
+                address: { equals: normalizedContract, mode: "insensitive" },
+            },
+        });
+
+        if (!contract) {
+            throw new Error(
+                `Contract ${normalizedContract} not found for chain ${chainId}`,
+            );
+        }
+
+        const packageId = Number(data.packageId);
+        const existingPackage = await this.prisma.stakingPackage.findUnique({
+            where: {
+                contractId_packageId: {
+                    contractId: contract.id,
+                    packageId,
+                },
+            },
+        });
+        const onChainPkg = existingPackage
+            ? null
+            : await this.fetchOnChainPackage(
+                  chainId,
+                  normalizedContract,
+                  packageId,
+              );
 
         await this.prisma.$transaction(
             async (tx) => {
@@ -370,41 +417,27 @@ export class BlockchainEventProcessorService {
                 userAddress,
             );
 
-            const contract = await tx.stakingContract.findFirst({
-                where: {
-                    chainId,
-                    address: { equals: normalizedContract, mode: "insensitive" },
-                },
-            });
-
-            if (!contract) {
-                throw new Error(
-                    `Contract ${normalizedContract} not found for chain ${chainId}`,
-                );
-            }
-
             let pkg = await tx.stakingPackage.findUnique({
                 where: {
                     contractId_packageId: {
                         contractId: contract.id,
-                        packageId: Number(data.packageId),
+                        packageId,
                     },
                 },
             });
 
             if (!pkg) {
-                const pId = Number(data.packageId);
-                const onChainPkg = await this.fetchOnChainPackage(
-                    chainId,
-                    normalizedContract,
-                    pId,
-                );
+                if (!onChainPkg) {
+                    throw new Error(
+                        `Package ${packageId} missing for contract ${normalizedContract}`,
+                    );
+                }
 
                 pkg = await tx.stakingPackage.upsert({
                     where: {
                         contractId_packageId: {
                             contractId: contract.id,
-                            packageId: pId,
+                            packageId,
                         },
                     },
                     update: {
@@ -414,7 +447,7 @@ export class BlockchainEventProcessorService {
                     },
                     create: {
                         contractId: contract.id,
-                        packageId: pId,
+                        packageId,
                         lockPeriod: onChainPkg.lockPeriod,
                         apy: onChainPkg.apy,
                         isEnabled: onChainPkg.enabled,
@@ -461,6 +494,11 @@ export class BlockchainEventProcessorService {
             await tx.transaction.upsert({
                 where: { txHash },
                 update: {
+                    walletId: wallet.id,
+                    chainId,
+                    stakePositionId: stakePosition.id,
+                    type: TransactionType.STAKE,
+                    amount: data.amount.toString(),
                     status: TransactionStatus.CONFIRMED,
                     confirmedAt: new Date(),
                 },
@@ -584,6 +622,11 @@ export class BlockchainEventProcessorService {
                 await tx.transaction.upsert({
                     where: { txHash },
                     update: {
+                        walletId: wallet.id,
+                        chainId,
+                        stakePositionId: stakePosition.id,
+                        type: TransactionType.CLAIM,
+                        amount: data.amount.toString(),
                         status: TransactionStatus.CONFIRMED,
                         confirmedAt: new Date(),
                     },
@@ -692,6 +735,15 @@ export class BlockchainEventProcessorService {
                 await tx.transaction.upsert({
                     where: { txHash },
                     update: {
+                        walletId: wallet.id,
+                        chainId,
+                        stakePositionId: stakePosition.id,
+                        type: TransactionType.WITHDRAW,
+                        amount: totalAmount.toString(),
+                        metadata: {
+                            principal: data.principal.toString(),
+                            reward: data.reward.toString(),
+                        },
                         status: TransactionStatus.CONFIRMED,
                         confirmedAt: new Date(),
                     },
@@ -826,6 +878,16 @@ export class BlockchainEventProcessorService {
                 await tx.transaction.upsert({
                     where: { txHash },
                     update: {
+                        walletId: wallet.id,
+                        chainId,
+                        stakePositionId: stakePosition.id,
+                        type: TransactionType.EMERGENCY_WITHDRAW,
+                        amount: data.principal.toString(),
+                        metadata: {
+                            principal: data.principal.toString(),
+                            rewardPaid: data.rewardPaid.toString(),
+                            rewardForfeited: data.rewardForfeited.toString(),
+                        },
                         status: TransactionStatus.CONFIRMED,
                         confirmedAt: new Date(),
                     },
