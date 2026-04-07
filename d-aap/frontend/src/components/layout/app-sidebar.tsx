@@ -48,14 +48,14 @@ const userNavItems = [
                 icon: Coins,
             },
             {
+                title: 'Stake Assets',
+                url: '/app/withdrawals',
+                icon: ArrowDownCircle,
+            },
+            {
                 title: 'Stake History',
                 url: '/app/stake-history',
                 icon: History,
-            },
-            {
-                title: 'Withdrawals',
-                url: '/app/withdrawals',
-                icon: ArrowDownCircle,
             },
             {
                 title: 'Claim History',
