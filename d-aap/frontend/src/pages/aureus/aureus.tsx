@@ -122,7 +122,7 @@ export default function AureusPage() {
                                         <Clock className="h-5 w-5 text-muted-foreground" />
                                         {formatLockPeriod(pkg.lockPeriod)}
                                     </CardTitle>
-                                    <CardDescription>Package #{pkg.id + 1}</CardDescription>
+                                    <CardDescription>Package #{pkg.id}</CardDescription>
                                 </CardHeader>
                                 <CardContent className="space-y-4">
                                     <div className="text-center">

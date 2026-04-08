@@ -189,8 +189,13 @@ export function useYieldStaking() {
         functionName: 'symbol',
     });
 
+    const PACKAGE_SCAN_IDS = useMemo(
+        () => Array.from({ length: 16 }, (_, i) => i),
+        [],
+    );
+
     const packageResults = useReadContracts({
-        contracts: [0, 1, 2, 3].map((id) => ({
+        contracts: PACKAGE_SCAN_IDS.map((id) => ({
             ...stakingConfig,
             functionName: 'packages',
             args: [id],
@@ -204,14 +209,14 @@ export function useYieldStaking() {
                 if (result.status !== 'success' || !result.result) return null;
                 const [lockPeriod, apy, enabled] = result.result as unknown as [bigint, number, boolean];
                 return {
-                    id: index,
+                    id: PACKAGE_SCAN_IDS[index],
                     lockPeriod,
                     apy: Number(apy) / 100,
                     enabled,
                 };
             })
             .filter((pkg): pkg is StakePackage => pkg !== null && pkg.enabled);
-    }, [packageResults.data]);
+    }, [PACKAGE_SCAN_IDS, packageResults.data]);
 
     const { writeContractAsync, data: txHash, isPending: isWritePending, reset } = useWriteContract();
 
