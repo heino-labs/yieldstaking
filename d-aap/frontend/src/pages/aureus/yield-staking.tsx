@@ -17,7 +17,6 @@ import { parseUnits, formatUnits } from 'viem';
 
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { WalletDisplay } from '@/components/wallet';
 import { LeaderboardTable } from '@/components/tables';
 import { useYieldStaking } from '@/hooks/use-yield-staking';
 import { useLeaderboard } from '@/hooks/use-staking';
@@ -279,7 +278,6 @@ export default function YieldStakingPage() {
                             Connect to start earning {rewardSymbol} by staking {tokenSymbol}
                         </p>
                     </div>
-                    <WalletDisplay />
                 </div>
             </div>
         );

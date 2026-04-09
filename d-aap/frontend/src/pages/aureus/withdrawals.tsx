@@ -11,13 +11,11 @@ import {
     TrendingUp,
     Wallet,
     ChevronRight,
-    AlertCircle,
 } from 'lucide-react';
 import { toast } from 'sonner';
 
 import { Button } from '@/components/ui/button';
 import { StakedPackagesTable, type StakedPackageItem } from '@/components/tables';
-import { WalletDisplay } from '@/components/wallet';
 import { useStakingPositionsView } from '@/hooks';
 import { useStakeWriter } from '@/hooks/use-yield-staking';
 import { formatTokenAmount, formatTokenAmountWithFloor } from '@/lib/utils/format';
@@ -183,29 +181,6 @@ export default function WithdrawalsPage() {
                     Manage your staked positions and collect rewards
                 </p>
             </div>
-
-            {/* ── Wallet banner ── */}
-            {!isConnected && (
-                <div className="rounded-2xl border border-amber-500/20 bg-amber-500/5 p-5">
-                    <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
-                        <div className="flex items-start gap-3">
-                            <AlertCircle className="h-5 w-5 text-amber-400 mt-0.5 shrink-0" />
-                            <div>
-                                <p className="text-sm font-semibold text-amber-400">
-                                    Wallet not connected
-                                </p>
-                                <p className="text-xs text-muted-foreground mt-0.5">
-                                    You can view positions from history, but claiming and withdrawing
-                                    require a connected wallet.
-                                </p>
-                            </div>
-                        </div>
-                        <div className="shrink-0">
-                            <WalletDisplay />
-                        </div>
-                    </div>
-                </div>
-            )}
 
             {isLoading && (
                 <div className="flex items-center justify-center gap-3 rounded-2xl border bg-card py-16 text-muted-foreground">
