@@ -48,7 +48,7 @@ function formatAmount(amount: string, decimals: number = 6): string {
     }).format(value);
 }
 
-function PositionDetails({ positionId, open, onOpenChange }: { positionId: number | null, open: boolean, onOpenChange: (open: boolean) => void }) {
+function PositionDetails({ positionId, open, onOpenChange, stakeDecimals, rewardDecimals, stakeSymbol, rewardSymbol }: { positionId: number | null, open: boolean, onOpenChange: (open: boolean) => void, stakeDecimals: number, rewardDecimals: number, stakeSymbol: string, rewardSymbol: string }) {
     const { data: txData, isLoading } = useAdminTransactions({ 
         positionId: positionId ?? undefined,
         limit: 50 
@@ -90,7 +90,7 @@ function PositionDetails({ positionId, open, onOpenChange }: { positionId: numbe
                                         </div>
                                         <div className="text-right">
                                             <div className="font-mono font-bold text-orange-600">
-                                                {formatAmount(withdrawal.amount, 18)} AUR
+                                                {formatAmount(withdrawal.amount, stakeDecimals)} {stakeSymbol}
                                             </div>
                                             <a 
                                                 href={`https://sepolia.etherscan.io/tx/${withdrawal.txHash}`}
@@ -127,7 +127,7 @@ function PositionDetails({ positionId, open, onOpenChange }: { positionId: numbe
                                             </div>
                                             <div className="text-right">
                                                 <div className="font-mono font-bold">
-                                                    {formatAmount(tx.amount, 6)} USDT
+                                                    {formatAmount(tx.amount, rewardDecimals)} {rewardSymbol}
                                                 </div>
                                                 <a 
                                                     href={`https://sepolia.etherscan.io/tx/${tx.txHash}`}
@@ -162,6 +162,7 @@ export default function AdminPositionsPage() {
     const [searchQuery, setSearchQuery] = React.useState('');
     const [debouncedSearch, setDebouncedSearch] = React.useState('');
     const [selectedPositionId, setSelectedPositionId] = React.useState<number | null>(null);
+    const [selectedContract, setSelectedContract] = React.useState<StakePositionAdmin['contract'] | null>(null);
     const [isDetailsOpen, setIsDetailsOpen] = React.useState(false);
 
     React.useEffect(() => {
@@ -189,7 +190,7 @@ export default function AdminPositionsPage() {
 
     const formatLockPeriod = (seconds: number) => {
         const days = Math.floor(seconds / 86400);
-        return `${days} days`;
+        return `${days} ${days === 1 ? 'day' : 'days'}`;
     };
 
     const columns: ColumnDef<StakePositionAdmin>[] = React.useMemo(() => [
@@ -235,14 +236,14 @@ export default function AdminPositionsPage() {
             accessorKey: 'rewardTotal',
             header: 'Rewards',
             cell: ({ row }) => {
-                const rewardDecimals = row.original.contract.rewardTokenSymbol === 'USDT' ? 6 : 18;
+                const { rewardTokenDecimals, rewardTokenSymbol } = row.original.contract;
                 return (
                     <div className="font-mono">
                         <div className="text-green-600 dark:text-green-400">
-                            +{formatAmount(row.original.rewardTotal, rewardDecimals)} {row.original.contract.rewardTokenSymbol}
+                            +{formatAmount(row.original.rewardTotal, rewardTokenDecimals)} {rewardTokenSymbol}
                         </div>
                         <div className="text-xs text-muted-foreground">
-                            Claimed: {formatAmount(row.original.rewardClaimed, rewardDecimals)}
+                            Claimed: {formatAmount(row.original.rewardClaimed, rewardTokenDecimals)}
                         </div>
                     </div>
                 );
@@ -303,6 +304,7 @@ export default function AdminPositionsPage() {
                     className="h-8 gap-1"
                     onClick={() => {
                         setSelectedPositionId(row.original.id);
+                        setSelectedContract(row.original.contract);
                         setIsDetailsOpen(true);
                     }}
                 >
@@ -463,6 +465,10 @@ export default function AdminPositionsPage() {
                 positionId={selectedPositionId}
                 open={isDetailsOpen}
                 onOpenChange={setIsDetailsOpen}
+                stakeDecimals={selectedContract?.stakeTokenDecimals ?? 18}
+                rewardDecimals={selectedContract?.rewardTokenDecimals ?? 6}
+                stakeSymbol={selectedContract?.stakeTokenSymbol ?? 'AUR'}
+                rewardSymbol={selectedContract?.rewardTokenSymbol ?? 'USDT'}
             />
         </div>
     );

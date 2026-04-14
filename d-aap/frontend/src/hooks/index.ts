@@ -16,7 +16,6 @@ export {
 export {
     useStakingContracts,
     useStakingContract,
-    useStakingPackages,
     useMyPositions,
     useMySummary,
     useGlobalStatistics,

@@ -256,15 +256,16 @@ export default function RewardHistoryPage() {
             apy: r.apy ?? 0,
             claimedAt: r.claimedAt || new Date().toISOString(),
             rewardSymbol: metadata.rewardSymbol || 'USDT',
-            rewardDecimals: 6,
+            rewardDecimals: metadata.rewardDecimals ?? 6,
         }));
         if (positionId) return rewards.filter((r) => String(r.positionId) === positionId);
         return rewards;
     }, [data, metadata, positionId, explorerUrl]);
 
     /* ── summary stats ── */
+    const rewardDec = metadata.rewardDecimals ?? 6;
     const totalRaw = tableData.reduce((s, r) => s + Number(r.amount), 0);
-    const totalFormatted = (totalRaw / 1e6).toLocaleString('en-US', {
+    const totalFormatted = (totalRaw / Math.pow(10, rewardDec)).toLocaleString('en-US', {
         minimumFractionDigits: 2,
         maximumFractionDigits: 4,
     });

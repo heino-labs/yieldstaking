@@ -140,6 +140,8 @@ export function useStakingPositionsView(
             contractAddress: first?.contractAddress,
             stakeSymbol: first?.stakeSymbol ?? 'AUR',
             rewardSymbol: first?.rewardSymbol ?? 'USDT',
+            stakeDecimals: first?.stakeTokenDecimals ?? DEFAULT_STAKE_DECIMALS,
+            rewardDecimals: first?.rewardTokenDecimals ?? DEFAULT_REWARD_DECIMALS,
         };
     }, [positions]);
 

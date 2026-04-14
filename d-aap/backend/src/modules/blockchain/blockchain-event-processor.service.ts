@@ -582,12 +582,17 @@ export class BlockchainEventProcessorService {
             return;
         }
 
-        const contract = await this.prisma.stakingContract.findUnique({
-            where: { address: normalizedContract },
+        const contract = await this.prisma.stakingContract.findFirst({
+            where: {
+                chainId,
+                address: { equals: normalizedContract, mode: "insensitive" },
+            },
         });
 
         if (!contract) {
-            throw new Error(`Contract ${normalizedContract} not found`);
+            throw new Error(
+                `Contract ${normalizedContract} not found for chain ${chainId}`,
+            );
         }
 
         await this.prisma.$transaction(
@@ -693,12 +698,17 @@ export class BlockchainEventProcessorService {
             return;
         }
 
-        const contract = await this.prisma.stakingContract.findUnique({
-            where: { address: normalizedContract },
+        const contract = await this.prisma.stakingContract.findFirst({
+            where: {
+                chainId,
+                address: { equals: normalizedContract, mode: "insensitive" },
+            },
         });
 
         if (!contract) {
-            throw new Error(`Contract ${normalizedContract} not found`);
+            throw new Error(
+                `Contract ${normalizedContract} not found for chain ${chainId}`,
+            );
         }
 
         await this.prisma.$transaction(
@@ -838,12 +848,17 @@ export class BlockchainEventProcessorService {
             return;
         }
 
-        const contract = await this.prisma.stakingContract.findUnique({
-            where: { address: normalizedContract },
+        const contract = await this.prisma.stakingContract.findFirst({
+            where: {
+                chainId,
+                address: { equals: normalizedContract, mode: "insensitive" },
+            },
         });
 
         if (!contract) {
-            throw new Error(`Contract ${normalizedContract} not found`);
+            throw new Error(
+                `Contract ${normalizedContract} not found for chain ${chainId}`,
+            );
         }
 
         await this.prisma.$transaction(

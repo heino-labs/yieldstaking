@@ -103,6 +103,8 @@ export interface StakePositionAdmin {
         address: string;
         stakeTokenSymbol: string;
         rewardTokenSymbol: string;
+        stakeTokenDecimals: number;
+        rewardTokenDecimals: number;
     };
     package: {
         packageId: number;
@@ -144,6 +146,12 @@ export interface AdminTransactionAdmin {
     stakePosition: {
         onChainStakeId: number;
         onChainPackageId: number;
+        contract: {
+            stakeTokenSymbol: string;
+            rewardTokenSymbol: string;
+            stakeTokenDecimals: number;
+            rewardTokenDecimals: number;
+        };
     } | null;
 }
 

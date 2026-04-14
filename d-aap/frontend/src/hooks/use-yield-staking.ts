@@ -15,7 +15,6 @@ import {
 import { DEFAULT_CHAIN_ID } from '@/lib/config/chains';
 import { getChainConfig } from '@/lib/config/chains';
 import { useUserInfo } from './use-user-info';
-import { fetchStakingPackages } from '@/lib/api/staking';
 
 export interface StakePackage {
     id: number;
@@ -191,19 +190,7 @@ export function useYieldStaking() {
         functionName: 'symbol',
     });
 
-    const { data: backendPackages } = useQuery({
-        queryKey: ['staking-packages', chainId, stakingAddress],
-        queryFn: () => fetchStakingPackages(),
-        staleTime: 60_000, // 1 minute
-    });
-
-    const packageIdsToScan = useMemo(() => {
-        if (backendPackages && backendPackages.length > 0) {
-            const ids = [...new Set(backendPackages.map(p => p.packageId))];
-            return ids.sort((a, b) => a - b);
-        }
-        return Array.from({ length: 32 }, (_, i) => i);
-    }, [backendPackages]);
+    const packageIdsToScan = useMemo(() => Array.from({ length: 10 }, (_, i) => i), []);
 
     const packageResults = useReadContracts({
         contracts: packageIdsToScan.map((id) => ({

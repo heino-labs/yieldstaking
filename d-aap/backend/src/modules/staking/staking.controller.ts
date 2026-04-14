@@ -47,29 +47,6 @@ export class StakingController {
         return this.stakingService.getContractById(id);
     }
 
-    @Get("packages")
-    @ApiOperation({ summary: "Get all staking packages" })
-    @ApiQuery({ name: "contractId", required: false, type: Number })
-    @ApiResponse({
-        status: 200,
-        description: "Packages retrieved successfully",
-    })
-    async getPackages(@Query("contractId") contractId?: number) {
-        return this.stakingService.getPackages(contractId);
-    }
-
-    @Get("packages/:id")
-    @ApiOperation({ summary: "Get staking package by ID" })
-    @ApiResponse({ status: 200, description: "Package retrieved successfully" })
-    async getPackageById(@Param("id", ParseIntPipe) id: number) {
-        const pkg = await this.stakingService.getPackageById(id);
-        return {
-            ...pkg,
-            lockPeriodDays: Math.floor(pkg.lockPeriod / 86400),
-            apyPercentage: `${(pkg.apy / 100).toFixed(2)}%`,
-        };
-    }
-
     @Get("statistics")
     @ApiOperation({ summary: "Get global staking statistics" })
     @ApiResponse({

@@ -87,7 +87,6 @@ export default function NetworkMonitorPage() {
     const onWithdrawSubmit = async () => {
         if (!selectedContract) return;
         
-        // Validation
         if (!withdrawAmount || parseFloat(withdrawAmount) <= 0) {
             setWithdrawError('Withdraw amount must be greater than 0');
             return;
@@ -108,7 +107,6 @@ export default function NetworkMonitorPage() {
     const onFundSubmit = async () => {
         if (!selectedContract) return;
         
-        // Validation
         if (!fundAmount || parseFloat(fundAmount) <= 0) {
             setFundError('Fund amount must be greater than 0');
             return;

@@ -115,19 +115,6 @@ export async function fetchStakingContract(id: number): Promise<StakingContract>
     }
 }
 
-export async function fetchStakingPackages(contractId?: number): Promise<StakingPackage[]> {
-    try {
-        const params = contractId ? { contractId } : undefined;
-        return await api.get<StakingPackage[]>('/v1/staking/packages', { params });
-    } catch (error: unknown) {
-        throw handleApiError({
-            error,
-            context: 'Failed to fetch staking packages',
-            showToast: false,
-        });
-    }
-}
-
 export async function fetchMyPositions(params?: {
     page?: number;
     limit?: number;

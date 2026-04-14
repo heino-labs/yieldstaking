@@ -55,7 +55,6 @@ async function main() {
         { packageId: 1, lockPeriod: 180 * 86400, apy: 2500, totalStaked: 0n, stakersCount: 0 },
         { packageId: 2, lockPeriod: 270 * 86400, apy: 3500, totalStaked: 0n, stakersCount: 0 },
         { packageId: 3, lockPeriod: 360 * 86400, apy: 5000, totalStaked: 0n, stakersCount: 0 },
-        { packageId: 4, lockPeriod: 45 * 86400, apy: 2000, totalStaked: 0n, stakersCount: 0 },
     ];
 
     for (const pkg of packagesData) {

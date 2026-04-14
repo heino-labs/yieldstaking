@@ -252,6 +252,8 @@ export class AdminService {
                             address: true,
                             stakeTokenSymbol: true,
                             rewardTokenSymbol: true,
+                            stakeTokenDecimals: true,
+                            rewardTokenDecimals: true,
                         },
                     },
                     package: {
@@ -372,6 +374,14 @@ export class AdminService {
                         select: {
                             onChainStakeId: true,
                             onChainPackageId: true,
+                            contract: {
+                                select: {
+                                    stakeTokenSymbol: true,
+                                    rewardTokenSymbol: true,
+                                    stakeTokenDecimals: true,
+                                    rewardTokenDecimals: true,
+                                },
+                            },
                         },
                     },
                 },

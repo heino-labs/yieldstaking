@@ -79,8 +79,8 @@ export class StakingService {
     }
 
     async getContractByAddress(address: string) {
-        const contract = await this.prisma.stakingContract.findUnique({
-            where: { address: address.toLowerCase() },
+        const contract = await this.prisma.stakingContract.findFirst({
+            where: { address: { equals: address, mode: "insensitive" } },
             include: {
                 chain: true,
                 packages: {
@@ -96,39 +96,6 @@ export class StakingService {
         }
 
         return contract;
-    }
-
-    async getPackages(contractId?: number) {
-        return this.prisma.stakingPackage.findMany({
-            where: contractId ? { contractId } : undefined,
-            include: {
-                contract: {
-                    select: {
-                        id: true,
-                        address: true,
-                        chainId: true,
-                        stakeTokenSymbol: true,
-                        rewardTokenSymbol: true,
-                    },
-                },
-            },
-            orderBy: [{ contractId: "asc" }, { packageId: "asc" }],
-        });
-    }
-
-    async getPackageById(id: number) {
-        const pkg = await this.prisma.stakingPackage.findUnique({
-            where: { id },
-            include: {
-                contract: true,
-            },
-        });
-
-        if (!pkg) {
-            throw new NotFoundException(ERR_MESSAGES.STAKING.PACKAGE_NOT_FOUND);
-        }
-
-        return pkg;
     }
 
     async getPackageByContractAndId(contractId: number, packageId: number) {

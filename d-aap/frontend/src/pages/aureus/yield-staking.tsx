@@ -156,6 +156,10 @@ export default function YieldStakingPage() {
     }, [leaderboardData, tokenDecimals]);
 
     const displayPackages = packages;
+    const highestApy = useMemo(
+        () => displayPackages.length > 0 ? Math.max(...displayPackages.map(p => p.apy)) : 0,
+        [displayPackages],
+    );
     const selectedPkg = useMemo(() => {
         if (!displayPackages.length) return null;
         return displayPackages.find((p) => p.id === selectedPackage) || displayPackages[0];
@@ -287,10 +291,8 @@ export default function YieldStakingPage() {
         <div className="flex flex-1 flex-col py-6 px-4 lg:px-8 gap-6">
             <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_minmax(340px,400px)]">
 
-                {/* ── Left: Info + Leaderboard ── */}
                 <div className="order-2 space-y-6 xl:order-1">
 
-                    {/* Program banner */}
                     <div className="rounded-2xl border border-slate-700/60 bg-gradient-to-br from-slate-900 via-slate-900 to-slate-800 overflow-hidden">
                         <div className="p-6">
                             <div className="flex items-start justify-between gap-4 mb-4">
@@ -312,14 +314,13 @@ export default function YieldStakingPage() {
                                         Stake{' '}
                                         <span className="text-white font-medium">{tokenSymbol}</span>{' '}
                                         and earn up to{' '}
-                                        <span className="text-amber-400 font-bold">50% APY</span>{' '}
+                                        <span className="text-amber-400 font-bold">{highestApy > 0 ? `${highestApy}%` : '—'} APY</span>{' '}
                                         in <span className="text-white font-medium">{rewardSymbol}</span>.
                                         Rewards accrue linearly and can be claimed anytime.
                                     </p>
                                 </div>
                             </div>
 
-                            {/* Stats row */}
                             <div className="grid grid-cols-3 gap-3">
                                 <div className="rounded-xl bg-white/5 border border-white/8 p-3.5">
                                     <p className="text-xs text-slate-400 mb-1">Total Locked</p>

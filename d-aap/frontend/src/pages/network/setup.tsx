@@ -8,8 +8,11 @@ import {
 } from '@tanstack/react-table';
 import { IconChevronLeft, IconChevronRight } from '@tabler/icons-react';
 import { ExternalLink, Pause, Play, Database, Wallet, Coins, Package, TrendingUp, Settings, Plus, ArrowDownToLine, ArrowUpFromLine, AlertTriangle } from 'lucide-react';
-import { parseUnits, formatUnits } from 'viem';
-import type { Address } from 'viem';
+import { parseUnits, formatUnits, type Address } from 'viem';
+import { useReadContracts } from 'wagmi';
+import { createPublicClientForChain } from '@/lib/blockchain/client';
+import { getYieldStakingContractConfig } from '@/lib/blockchain/contracts';
+import { DEFAULT_CHAIN_ID } from '@/lib/config/chains';
 
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -44,20 +47,101 @@ function formatAmount(amount: string, decimals: number = 6): string {
     return new Intl.NumberFormat('en-US', { maximumFractionDigits: decimals > 6 ? 2 : 4 }).format(value);
 }
 
-interface PackagesTableProps {
-    packages: any[];
-    stakeTokenDecimals: number;
-    stakeTokenSymbol: string;
-    onUpdatePackage: (pkg: any) => void;
+const PACKAGE_IDS_TO_SCAN = Array.from({ length: 10 }, (_, i) => i);
+
+interface MergedPackage {
+    packageId: number;
+    lockPeriod: number;
+    apy: number;
+    isEnabled: boolean;
+    totalStaked: string;
+    stakersCount: number;
 }
 
-function PackagesTable({ packages, stakeTokenDecimals, stakeTokenSymbol, onUpdatePackage }: PackagesTableProps) {
+interface OnChainPackagesTableProps {
+    contractAddress: Address;
+    dbPackages: StakingContractAdmin['packages'];
+    stakeTokenDecimals: number;
+    stakeTokenSymbol: string;
+    onUpdatePackage: (pkg: MergedPackage) => void;
+}
+
+function OnChainPackagesTable({ contractAddress, dbPackages, stakeTokenDecimals, stakeTokenSymbol, onUpdatePackage }: OnChainPackagesTableProps) {
+    const stakingConfig = React.useMemo(
+        () => getYieldStakingContractConfig(DEFAULT_CHAIN_ID),
+        [],
+    );
+
+    const packageResults = useReadContracts({
+        contracts: PACKAGE_IDS_TO_SCAN.map((id) => ({
+            ...stakingConfig,
+            address: contractAddress,
+            functionName: 'packages' as const,
+            args: [id],
+        })),
+    });
+
+    const dbMap = React.useMemo(() => {
+        const map = new Map<number, StakingContractAdmin['packages'][number]>();
+        for (const p of dbPackages) map.set(p.packageId, p);
+        return map;
+    }, [dbPackages]);
+
+    const packages = React.useMemo<MergedPackage[]>(() => {
+        if (!packageResults.data) return [];
+
+        const result: MergedPackage[] = [];
+
+        packageResults.data.forEach((res, index) => {
+            if (res.status !== 'success' || !res.result) return;
+
+            const pkgResult = res.result;
+            let lockPeriod: bigint;
+            let apy: bigint;
+            let enabled: boolean;
+
+            if (Array.isArray(pkgResult)) {
+                [lockPeriod, apy, enabled] = pkgResult as unknown as [bigint, bigint, boolean];
+            } else if (typeof pkgResult === 'object' && pkgResult !== null) {
+                const pkg = pkgResult as unknown as { lockPeriod: bigint; apy: bigint; enabled: boolean };
+                lockPeriod = pkg.lockPeriod;
+                apy = pkg.apy;
+                enabled = pkg.enabled;
+            } else {
+                return;
+            }
+
+            if (Number(lockPeriod) === 0 && Number(apy) === 0) return;
+
+            const dbPkg = dbMap.get(PACKAGE_IDS_TO_SCAN[index]);
+            result.push({
+                packageId: PACKAGE_IDS_TO_SCAN[index],
+                lockPeriod: Number(lockPeriod),
+                apy: Number(apy) / 100,
+                isEnabled: enabled,
+                totalStaked: dbPkg?.totalStaked ?? '0',
+                stakersCount: dbPkg?.stakersCount ?? 0,
+            });
+        });
+
+        return result;
+    }, [packageResults.data, dbMap]);
+
     const formatLockPeriod = (seconds: number) => {
-        const days = Math.floor(seconds / 86400);
-        return `${days} days`;
+        const days = seconds / 86400;
+        if (days >= 365) {
+            const years = Math.floor(days / 365);
+            return `${years} ${years === 1 ? 'Year' : 'Years'}`;
+        }
+        if (days >= 30) {
+            const months = Math.floor(days / 30);
+            return `${months} ${months === 1 ? 'Month' : 'Months'}`;
+        }
+        const wholeDays = Math.floor(days);
+        return `${wholeDays} ${wholeDays === 1 ? 'Day' : 'Days'}`;
     };
 
-    const columns: ColumnDef<any>[] = React.useMemo(() => [
+    const columns: ColumnDef<MergedPackage>[] = React.useMemo(() => [
         {
             accessorKey: 'packageId',
             header: 'Package ID',
@@ -73,7 +157,7 @@ function PackagesTable({ packages, stakeTokenDecimals, stakeTokenSymbol, onUpdat
             header: 'APY',
             cell: ({ row }) => (
                 <span className="text-green-600 dark:text-green-400 font-medium">
-                    {(row.original.apy / 100).toFixed(1)}%
+                    {row.original.apy.toFixed(1)}%
                 </span>
             ),
         },
@@ -119,7 +203,7 @@ function PackagesTable({ packages, stakeTokenDecimals, stakeTokenSymbol, onUpdat
 
     const table = useReactTable({
         data: packages,
-        columns: columns as ColumnDef<any, any>[],
+        columns: columns as ColumnDef<MergedPackage, any>[],
         getCoreRowModel: getCoreRowModel(),
         getPaginationRowModel: getPaginationRowModel(),
         initialState: {
@@ -163,7 +247,7 @@ function PackagesTable({ packages, stakeTokenDecimals, stakeTokenSymbol, onUpdat
                         ) : (
                             <TableRow>
                                 <TableCell colSpan={columns.length} className="h-16 text-center text-muted-foreground">
-                                    No packages found
+                                    {packageResults.isLoading ? 'Loading on-chain packages…' : 'No packages found on contract'}
                                 </TableCell>
                             </TableRow>
                         )}
@@ -250,7 +334,7 @@ export default function NetworkSetupPage() {
         setPackageForm({
             id: pkg.packageId,
             lockPeriodDays: Math.floor(pkg.lockPeriod / 86400),
-            apyBasisPoints: pkg.apy,
+            apyBasisPoints: pkg.apy * 100,
             enabled: pkg.isEnabled
         });
         setPackageErrors({});
@@ -260,7 +344,6 @@ export default function NetworkSetupPage() {
     const onSetPackageSubmit = async () => {
         if (!selectedContract) return;
         
-        // Validation
         const errors: Record<string, string> = {};
         if (packageForm.lockPeriodDays <= 0) {
             errors.lockPeriodDays = 'Lock period must be greater than 0 days';
@@ -279,7 +362,7 @@ export default function NetworkSetupPage() {
         
         try {
             const lockPeriod = BigInt(packageForm.lockPeriodDays) * 86400n;
-            await setPackage(packageForm.id, lockPeriod, packageForm.apyBasisPoints, packageForm.enabled);
+            await setPackage(packageForm.id, lockPeriod, packageForm.apyBasisPoints, packageForm.enabled, selectedContract.address as Address);
             setIsPackageDialogOpen(false);
             setPackageErrors({});
             toast.success('Package update transaction sent');
@@ -291,7 +374,6 @@ export default function NetworkSetupPage() {
     const onSetMinStakeSubmit = async () => {
         if (!selectedContract) return;
         
-        // Validation
         if (!minStakeValue || parseFloat(minStakeValue) < 0) {
             setMinStakeError('Minimum stake amount must be 0 or greater');
             return;
@@ -300,7 +382,7 @@ export default function NetworkSetupPage() {
         
         try {
             const amount = parseUnits(minStakeValue, selectedContract.stakeTokenDecimals);
-            await setMinStakeAmount(amount);
+            await setMinStakeAmount(amount, selectedContract.address as Address);
             setIsMinStakeDialogOpen(false);
             setMinStakeError('');
             toast.success('Min stake update transaction sent');
@@ -312,7 +394,6 @@ export default function NetworkSetupPage() {
     const onSetMaxStakeSubmit = async () => {
         if (!selectedContract) return;
         
-        // Validation
         if (!maxStakeValue || parseFloat(maxStakeValue) < 0) {
             setMaxStakeError('Maximum stake amount must be 0 or greater');
             return;
@@ -321,7 +402,7 @@ export default function NetworkSetupPage() {
         
         try {
             const amount = parseUnits(maxStakeValue, selectedContract.stakeTokenDecimals);
-            await setMaxStakePerUser(amount);
+            await setMaxStakePerUser(amount, selectedContract.address as Address);
             setIsMaxStakeDialogOpen(false);
             setMaxStakeError('');
             toast.success('Max stake update transaction sent');
@@ -333,7 +414,6 @@ export default function NetworkSetupPage() {
     const onSetMaxTotalSubmit = async () => {
         if (!selectedContract) return;
         
-        // Validation
         if (!maxTotalValue || parseFloat(maxTotalValue) < 0) {
             setMaxTotalError('Maximum total staked must be 0 or greater');
             return;
@@ -342,7 +422,7 @@ export default function NetworkSetupPage() {
         
         try {
             const amount = parseUnits(maxTotalValue, selectedContract.stakeTokenDecimals);
-            await setMaxTotalStakedPerPackage(amount);
+            await setMaxTotalStakedPerPackage(amount, selectedContract.address as Address);
             setIsMaxTotalDialogOpen(false);
             setMaxTotalError('');
             toast.success('Max total per package update transaction sent');
@@ -354,7 +434,6 @@ export default function NetworkSetupPage() {
     const onWithdrawRewardSubmit = async () => {
         if (!selectedContract) return;
         
-        // Validation
         if (!withdrawRewardValue || parseFloat(withdrawRewardValue) <= 0) {
             setWithdrawRewardError('Withdraw amount must be greater than 0');
             return;
@@ -375,7 +454,6 @@ export default function NetworkSetupPage() {
     const onFundTokenSubmit = async () => {
         if (!selectedContract) return;
         
-        // Validation
         if (!fundTokenValue || parseFloat(fundTokenValue) <= 0) {
             setFundTokenError('Fund amount must be greater than 0');
             return;
@@ -405,11 +483,20 @@ export default function NetworkSetupPage() {
 
     const handleTogglePause = async (contract: StakingContractAdmin) => {
         try {
-            if (contract.isPaused) {
-                await unpause();
+            const contractAddr = contract.address as Address;
+            const client = createPublicClientForChain(DEFAULT_CHAIN_ID);
+            const stakingConfig = getYieldStakingContractConfig(DEFAULT_CHAIN_ID);
+            const onChainPaused = await client.readContract({
+                ...stakingConfig,
+                address: contractAddr,
+                functionName: 'paused',
+            });
+
+            if (onChainPaused) {
+                await unpause(contractAddr);
                 toast.success('Unpause transaction sent');
             } else {
-                await pause();
+                await pause(contractAddr);
                 toast.success('Pause transaction sent');
             }
         } catch (err: any) {
@@ -620,8 +707,9 @@ export default function NetworkSetupPage() {
                                     </Button>
                                 </AdminWalletGuard>
                             </div>
-                            <PackagesTable 
-                                packages={contract.packages}
+                            <OnChainPackagesTable 
+                                contractAddress={contract.address as Address}
+                                dbPackages={contract.packages}
                                 stakeTokenDecimals={contract.stakeTokenDecimals}
                                 stakeTokenSymbol={contract.stakeTokenSymbol}
                                 onUpdatePackage={(pkg) => {

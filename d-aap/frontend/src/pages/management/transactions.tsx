@@ -41,9 +41,15 @@ import { useAdminTransactions } from '@/hooks/use-admin';
 
 import type { AdminTransactionAdmin } from '@/interfaces/admin';
 
-function formatAmount(amount: string, type: string): string {
-    const decimals = type === 'STAKE' || type === 'WITHDRAW' ? 18 : 6;
-    const symbol = type === 'STAKE' || type === 'WITHDRAW' ? 'AUR' : 'USDT';
+function formatAmount(amount: string, tx: AdminTransactionAdmin): string {
+    const contract = tx.stakePosition?.contract;
+    const isStakeOrWithdraw = tx.type === 'STAKE' || tx.type === 'WITHDRAW' || tx.type === 'EMERGENCY_WITHDRAW';
+    const decimals = isStakeOrWithdraw
+        ? (contract?.stakeTokenDecimals ?? 18)
+        : (contract?.rewardTokenDecimals ?? 6);
+    const symbol = isStakeOrWithdraw
+        ? (contract?.stakeTokenSymbol ?? 'AUR')
+        : (contract?.rewardTokenSymbol ?? 'USDT');
     const value = Number(BigInt(amount)) / Math.pow(10, decimals);
     return `${new Intl.NumberFormat('en-US', { 
         maximumFractionDigits: decimals >= 18 ? 4 : 6,
@@ -136,7 +142,7 @@ export default function AdminTransactionsPage() {
             header: 'Amount',
             cell: ({ row }) => (
                 <span className="font-mono font-bold">
-                    {formatAmount(row.original.amount, row.original.type)}
+                    {formatAmount(row.original.amount, row.original)}
                 </span>
             ),
         },

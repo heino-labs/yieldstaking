@@ -197,7 +197,7 @@ export default function StakeHistoryPage() {
                             <StatCard
                                 icon={<Layers className="h-4 w-4" />}
                                 label="Avg APY"
-                                value={`${(avgApy / 100).toFixed(0)}%`}
+                                value={`${avgApy.toFixed(0)}%`}
                                 accent="bg-violet-500/10 text-violet-400"
                             />
                         </div>

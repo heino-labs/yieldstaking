@@ -16,9 +16,16 @@ function formatNumber(value: string, decimals = 2): string {
 
 function formatLockPeriod(seconds: bigint): string {
     const days = Number(seconds) / 86400;
-    if (days >= 365) return `${Math.floor(days / 365)} Year`;
-    if (days >= 30) return `${Math.floor(days / 30)} Month`;
-    return `${Math.floor(days)} Days`;
+    if (days >= 365) {
+        const years = Math.floor(days / 365);
+        return `${years} ${years === 1 ? 'Year' : 'Years'}`;
+    }
+    if (days >= 30) {
+        const months = Math.floor(days / 30);
+        return `${months} ${months === 1 ? 'Month' : 'Months'}`;
+    }
+    const wholeDays = Math.floor(days);
+    return `${wholeDays} ${wholeDays === 1 ? 'Day' : 'Days'}`;
 }
 
 export default function AureusPage() {

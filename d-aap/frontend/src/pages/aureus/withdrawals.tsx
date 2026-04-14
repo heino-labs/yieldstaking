@@ -252,7 +252,7 @@ export default function WithdrawalsPage() {
                                                 <p className="text-xs text-muted-foreground">
                                                     Stake #{selected.stakeId} ·{' '}
                                                     <span className="text-emerald-400 font-medium">
-                                                        {(selected.apy / 100).toFixed(0)}% APY
+                                                        {selected.apy.toFixed(0)}% APY
                                                     </span>
                                                 </p>
                                             </div>

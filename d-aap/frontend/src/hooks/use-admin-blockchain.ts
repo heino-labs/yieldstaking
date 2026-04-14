@@ -40,103 +40,109 @@ export function useAdminBlockchainActions() {
         return address;
     }, [address, chainId]);
 
-    const pause = useCallback(async () => {
+    const pause = useCallback(async (contractAddress?: Address) => {
         const account = ensureReadyToWrite();
         const client = createPublicClientForChain(chainId as typeof DEFAULT_CHAIN_ID);
+        const targetConfig = resolveStakingConfig(contractAddress);
         const simulation = await client.simulateContract({
-            ...stakingConfig,
+            ...targetConfig,
             functionName: 'pause',
             account,
         });
         writeContract({
-            ...stakingConfig,
+            ...targetConfig,
             functionName: 'pause',
             gas: simulation.request.gas,
         });
-    }, [chainId, ensureReadyToWrite, stakingConfig, writeContract]);
+    }, [chainId, ensureReadyToWrite, resolveStakingConfig, writeContract]);
 
-    const unpause = useCallback(async () => {
+    const unpause = useCallback(async (contractAddress?: Address) => {
         const account = ensureReadyToWrite();
         const client = createPublicClientForChain(chainId as typeof DEFAULT_CHAIN_ID);
+        const targetConfig = resolveStakingConfig(contractAddress);
         const simulation = await client.simulateContract({
-            ...stakingConfig,
+            ...targetConfig,
             functionName: 'unpause',
             account,
         });
         writeContract({
-            ...stakingConfig,
+            ...targetConfig,
             functionName: 'unpause',
             gas: simulation.request.gas,
         });
-    }, [chainId, ensureReadyToWrite, stakingConfig, writeContract]);
+    }, [chainId, ensureReadyToWrite, resolveStakingConfig, writeContract]);
 
-    const setPackage = useCallback(async (id: number, lockPeriod: bigint, apy: number, enabled: boolean) => {
+    const setPackage = useCallback(async (id: number, lockPeriod: bigint, apy: number, enabled: boolean, contractAddress?: Address) => {
         const account = ensureReadyToWrite();
         const client = createPublicClientForChain(chainId as typeof DEFAULT_CHAIN_ID);
+        const targetConfig = resolveStakingConfig(contractAddress);
         const simulation = await client.simulateContract({
-            ...stakingConfig,
+            ...targetConfig,
             functionName: 'setPackage',
             args: [id, lockPeriod, apy, enabled],
             account,
         });
         writeContract({
-            ...stakingConfig,
+            ...targetConfig,
             functionName: 'setPackage',
             args: [id, lockPeriod, apy, enabled],
             gas: simulation.request.gas,
         });
-    }, [chainId, ensureReadyToWrite, stakingConfig, writeContract]);
+    }, [chainId, ensureReadyToWrite, resolveStakingConfig, writeContract]);
 
-    const setMinStakeAmount = useCallback(async (newAmount: bigint) => {
+    const setMinStakeAmount = useCallback(async (newAmount: bigint, contractAddress?: Address) => {
         const account = ensureReadyToWrite();
         const client = createPublicClientForChain(chainId as typeof DEFAULT_CHAIN_ID);
+        const targetConfig = resolveStakingConfig(contractAddress);
         const simulation = await client.simulateContract({
-            ...stakingConfig,
+            ...targetConfig,
             functionName: 'setMinStakeAmount',
             args: [newAmount],
             account,
         });
         writeContract({
-            ...stakingConfig,
+            ...targetConfig,
             functionName: 'setMinStakeAmount',
             args: [newAmount],
             gas: simulation.request.gas,
         });
-    }, [chainId, ensureReadyToWrite, stakingConfig, writeContract]);
+    }, [chainId, ensureReadyToWrite, resolveStakingConfig, writeContract]);
 
-    const setMaxStakePerUser = useCallback(async (newMax: bigint) => {
+    const setMaxStakePerUser = useCallback(async (newMax: bigint, contractAddress?: Address) => {
         const account = ensureReadyToWrite();
         const client = createPublicClientForChain(chainId as typeof DEFAULT_CHAIN_ID);
+        const targetConfig = resolveStakingConfig(contractAddress);
         const simulation = await client.simulateContract({
-            ...stakingConfig,
+            ...targetConfig,
             functionName: 'setMaxStakePerUser',
             args: [newMax],
             account,
         });
         writeContract({
-            ...stakingConfig,
+            ...targetConfig,
             functionName: 'setMaxStakePerUser',
             args: [newMax],
             gas: simulation.request.gas,
         });
-    }, [chainId, ensureReadyToWrite, stakingConfig, writeContract]);
+    }, [chainId, ensureReadyToWrite, resolveStakingConfig, writeContract]);
 
-    const setMaxTotalStakedPerPackage = useCallback(async (newMax: bigint) => {
+    const setMaxTotalStakedPerPackage = useCallback(async (newMax: bigint, contractAddress?: Address) => {
         const account = ensureReadyToWrite();
         const client = createPublicClientForChain(chainId as typeof DEFAULT_CHAIN_ID);
+        const targetConfig = resolveStakingConfig(contractAddress);
         const simulation = await client.simulateContract({
-            ...stakingConfig,
+            ...targetConfig,
             functionName: 'setMaxTotalStakedPerPackage',
             args: [newMax],
             account,
         });
         writeContract({
-            ...stakingConfig,
+            ...targetConfig,
             functionName: 'setMaxTotalStakedPerPackage',
             args: [newMax],
             gas: simulation.request.gas,
         });
-    }, [chainId, ensureReadyToWrite, stakingConfig, writeContract]);
+    }, [chainId, ensureReadyToWrite, resolveStakingConfig, writeContract]);
 
     const withdrawExcessReward = useCallback(async (amount: bigint, contractAddress?: Address) => {
         const account = ensureReadyToWrite();

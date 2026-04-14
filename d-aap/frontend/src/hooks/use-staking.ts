@@ -4,7 +4,6 @@ import { hasAccountAuth } from '@/lib/auth';
 import {
     fetchStakingContracts,
     fetchStakingContract,
-    fetchStakingPackages,
     fetchMyPositions,
     fetchMySummary,
     fetchGlobalStatistics,
@@ -25,14 +24,6 @@ export function useStakingContract(id: number) {
         queryFn: () => fetchStakingContract(id),
         staleTime: 60 * 1000,
         enabled: !!id,
-    });
-}
-
-export function useStakingPackages(contractId?: number) {
-    return useQuery({
-        queryKey: ['staking', 'packages', contractId],
-        queryFn: () => fetchStakingPackages(contractId),
-        staleTime: 60 * 1000,
     });
 }
 
