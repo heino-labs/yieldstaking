@@ -1136,7 +1136,7 @@ export class BlockchainEventProcessorService {
         const contract = new ethers.Contract(
             contractAddress,
             [
-                "function packages(uint256) view returns (uint64 lockPeriod, uint32 apy, bool enabled)",
+                 "function packages(uint8) view returns (uint64 lockPeriod, uint32 apy, bool enabled)",
             ],
             provider,
         );
